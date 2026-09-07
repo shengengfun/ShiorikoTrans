@@ -1,0 +1,26 @@
+# FunASR Server Requirements
+# Python 3.8+ required
+
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.12
+
+# FunASR - core speech recognition
+funasr>=1.2.0
+modelscope>=1.20.0
+
+# Audio processing
+torch>=2.0.0
+torchaudio>=2.0.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Optional: for better performance
+# onnxruntime>=1.18.0
+
+# Optional: for GPU acceleration
+# torch==2.0.0+cu118  # CUDA 11.8
+
+# Note: The first run will automatically download models (~1.5GB)
+# from ModelScope. Models are cached in the FUNASR_MODELS_DIR.

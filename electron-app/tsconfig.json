@@ -1,0 +1,40 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"useDefineForClassFields": true,
+		"lib": ["ES2020", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"skipLibCheck": true,
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"isolatedModules": true,
+		"moduleDetection": "force",
+		"noEmit": true,
+		"jsx": "react-jsx",
+		"strict": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"noFallthroughCasesInSwitch": true,
+		"paths": {
+			"~/*": ["./src/*"],
+			"@tauri-apps/api": ["./src/@tauri-apps/api/index.ts"],
+			"@tauri-apps/api/*": ["./src/@tauri-apps/api/*"],
+			"@tauri-apps/api/webview": ["./src/@tauri-apps/api/webview/index.ts"],
+			"@tauri-apps/plugin-fs": ["./src/@tauri-apps/plugin-fs/index.ts"],
+			"@tauri-apps/plugin-dialog": ["./src/@tauri-apps/plugin-dialog/index.ts"],
+			"@tauri-apps/plugin-os": ["./src/@tauri-apps/plugin-os/index.ts"],
+			"@tauri-apps/plugin-store": ["./src/@tauri-apps/plugin-store/index.ts"],
+			"@tauri-apps/plugin-opener": ["./src/@tauri-apps/plugin-opener/index.ts"],
+			"@tauri-apps/plugin-clipboard-manager": ["./src/@tauri-apps/plugin-clipboard-manager/index.ts"],
+			"@tauri-apps/plugin-global-shortcut": ["./src/@tauri-apps/plugin-global-shortcut/index.ts"],
+			"@tauri-apps/plugin-http": ["./src/@tauri-apps/plugin-http/index.ts"],
+			"@tauri-apps/plugin-process": ["./src/@tauri-apps/plugin-process/index.ts"],
+			"@tauri-apps/plugin-updater": ["./src/@tauri-apps/plugin-updater/index.ts"],
+			"@tauri-apps/plugin-notification": ["./src/@tauri-apps/plugin-notification/index.ts"],
+			"@tauri-apps/plugin-deep-link": ["./src/@tauri-apps/plugin-deep-link/index.ts"],
+			"tauri-plugin-keepawake-api": ["./src/tauri-plugin-keepawake-api/index.ts"]
+		}
+	},
+	"include": ["src", "electron"],
+	"references": [{ "path": "./tsconfig.node.json" }]
+}

@@ -1,0 +1,61 @@
+{
+	"$schema": "./gen/schemas/desktop-schema.json",
+	"productName": "Audire",
+	"version": "1.0.1",
+	"identifier": "com.audire.app",
+	"app": {
+		"macOSPrivateApi": true,
+		"windows": [],
+		"withGlobalTauri": true,
+		"security": {
+			"assetProtocol": {
+				"scope": {
+					"allow": [
+						"**"
+					],
+					"deny": [],
+					"requireLiteralLeadingDot": false
+				},
+				"enable": true
+			},
+			"csp": null
+		}
+	},
+	"build": {
+		"beforeDevCommand": "pnpm dev",
+		"beforeBuildCommand": "pnpm build",
+		"frontendDist": "../dist",
+		"devUrl": "http://localhost:1420"
+	},
+	"bundle": {
+		"active": true,
+		"targets": [
+			"nsis",
+			"deb",
+			"rpm",
+			"dmg",
+			"app"
+		],
+		"createUpdaterArtifacts": false,
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		],
+		"externalBin": [
+			"binaries/sona"
+		]
+	},
+	"plugins": {
+		"deep-link": {
+			"mobile": [],
+			"desktop": {
+				"schemes": [
+				"audire"
+			]
+			}
+		}
+	}
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Aptabase Analytics Report"
+  short_description: "Export and analyze Audire Aptabase telemetry"
+  default_prompt: "Use $aptabase-analytics-report to export recent Audire analytics and summarize failures by version, user, and OS."

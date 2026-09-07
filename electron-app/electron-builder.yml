@@ -1,0 +1,68 @@
+appId: com.audire.electron
+productName: Audire
+copyright: MIT License - Original audire by thewh1teagle, Electron migration
+
+directories:
+  output: dist-release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - public/**/*
+
+extraResources:
+  - from: backend/
+    to: backend/
+    filter:
+      - "**/*"
+      - "!__pycache__/**"
+      - "!*.pyc"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: public/icon.png
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: public/icon.icns
+  category: public.app-category.productivity
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+  icon: public/icon.png
+  category: Audio
+
+publish:
+  provider: github
+  owner: audire-electron
+  repo: audire-electron

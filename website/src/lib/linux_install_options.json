@@ -1,0 +1,10 @@
+[
+	{
+		"title": "Quick Install",
+		"command": "curl -sSf https://audire.github.io/audire/installer.sh | sh -s {tag}"
+	},
+	{
+		"title": "Yay (Arch Linux)",
+		"command": "yay -S audire-bin"
+	}
+]

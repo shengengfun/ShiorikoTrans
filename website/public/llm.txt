@@ -1,0 +1,22 @@
+# Audire
+
+Official website: https://audire.github.io/audire/
+Project repository: https://github.com/audire/audire
+
+Audire is a local-first transcription app for audio and video.
+
+Key pages:
+- Home: https://audire.github.io/audire/
+- Features: https://audire.github.io/audire/features
+- Documentation: https://audire.github.io/audire/docs
+- Privacy Policy: https://audire.github.io/audire/privacy_policy.pdf
+
+Key capabilities:
+- Audio and video transcription
+- URL transcription
+- Speaker diarization
+- AI assistant summaries
+- Multiple export formats
+- Multilingual support
+- Works on Windows, macOS, and Linux
+

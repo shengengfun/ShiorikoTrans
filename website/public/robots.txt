@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://audire.github.io/audire/sitemap.xml
+

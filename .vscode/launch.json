@@ -1,0 +1,57 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug executable 'audire'",
+			"cargo": {
+				"args": ["build", "--bin=audire", "--package=audire"],
+				"filter": {
+					"name": "audire",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug executable 'audire' in Release mode",
+			"cargo": {
+				"args": ["build", "--bin=audire", "--package=audire", "--release"],
+				"filter": {
+					"name": "audire",
+					"kind": "bin"
+				},
+				"env": {
+					"FFMPEG_DIR": "${workspaceFolder}\\desktop\\src-tauri\\ffmpeg",
+					"OPENBLAS_PATH": "${workspaceFolder}\\desktop\\src-tauri\\openblas",
+					"LIBCLANG_PATH": "C:\\Program Files\\LLVM\\bin",
+					"PATH": "${env:PATH};${workspaceFolder}\\desktop\\src-tauri\\openblas\\bin;${workspaceFolder}\\desktop\\src-tauri\\ffmpeg\\bin\\x64",
+					"RUSTFLAGS": "-L ${workspaceFolder}\\desktop\\src-tauri\\openblas\\lib"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		},
+		{
+			"type": "lldb",
+			"request": "launch",
+			"name": "Debug unit tests in executable 'audire'",
+			"cargo": {
+				"args": ["test", "--no-run", "--bin=audire", "--package=audire"],
+				"filter": {
+					"name": "audire",
+					"kind": "bin"
+				}
+			},
+			"args": [],
+			"cwd": "${workspaceFolder}"
+		}
+	]
+}
