@@ -5,7 +5,7 @@ import * as config from './config'
 import { NamedPath } from './types'
 
 export function openSettingsSection(scrollTo: string) {
-	window.dispatchEvent(new CustomEvent('audire:open-settings', { detail: { scrollTo } }))
+	window.dispatchEvent(new CustomEvent('shiorikotrans:open-settings', { detail: { scrollTo } }))
 }
 
 export async function resetApp() {
@@ -29,7 +29,7 @@ export async function resetApp() {
 }
 
 export async function getIssueUrl(logs: string) {
-	return `https://github.com/thewh1teagle/audire/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=App+reports+bug+&logs=${encodeURIComponent(
+	return `https://github.com/thewh1teagle/shiorikotrans/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=App+reports+bug+&logs=${encodeURIComponent(
 		logs,
 	)}`
 }

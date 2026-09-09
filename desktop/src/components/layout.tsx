@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react'
-import { m } from '~/paraglide/messages.js'
-import AppMenu from './app-menu'
+import TitleBar from './title-bar'
+import StatusBar from './status-bar'
 import DropModal from './drop-modal'
 import SettingsModal from './settings-modal'
 import PageTransition from './page-transition'
@@ -20,24 +20,22 @@ export default function Layout({ children }: { children: ReactNode }) {
 			const scrollTo = (event as CustomEvent<{ scrollTo?: string }>).detail?.scrollTo
 			openSettings(scrollTo)
 		}
-		window.addEventListener('audire:open-settings', onOpenSettings)
-		return () => window.removeEventListener('audire:open-settings', onOpenSettings)
+		window.addEventListener('shiorikotrans:open-settings', onOpenSettings)
+		return () => window.removeEventListener('shiorikotrans:open-settings', onOpenSettings)
 	}, [])
 
 	return (
-		<div className="min-h-screen">
+		<div className="flex h-screen flex-col overflow-hidden text-foreground">
 			{settingsVisible && <SettingsModal visible={settingsVisible} setVisible={setSettingsVisible} scrollTo={settingsScrollTo} />}
 			<DropModal />
 			<ModelDownloadPrompt />
-			<div className="app-shell">
-				<div className="stagger-in mb-6 flex items-center justify-between gap-4 pb-1">
-					<h1 className="app-title">{m.appTitle()}</h1>
-					<AppMenu onClickSettings={openSettings} />
-				</div>
+			<TitleBar onOpenSettings={openSettings} />
+			<main className="min-h-0 flex-1 overflow-y-auto">
 				<PageTransition>
-					<div className="stagger-in [animation-delay:120ms]">{children}</div>
+					<div className="app-shell">{children}</div>
 				</PageTransition>
-			</div>
+			</main>
+			<StatusBar />
 		</div>
 	)
 }

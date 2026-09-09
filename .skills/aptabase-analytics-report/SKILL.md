@@ -1,13 +1,13 @@
 ---
 name: aptabase-analytics-report
-description: Export and analyze Audire Aptabase analytics for recent time windows or existing CSV exports, with emphasis on failure rates, affected users, app versions, and OS breakdowns. Use when Codex needs to: (1) export recent analytics with `scripts/export_analytics.py`, (2) filter an export to the exact last N hours, (3) restrict analysis to specific `app_version` values, (4) quantify the impact of the current failure-related events defined in the repository, or (5) produce a concise reliability report with fix suggestions.
+description: Export and analyze ShiorikoTrans Aptabase analytics for recent time windows or existing CSV exports, with emphasis on failure rates, affected users, app versions, and OS breakdowns. Use when Codex needs to: (1) export recent analytics with `scripts/export_analytics.py`, (2) filter an export to the exact last N hours, (3) restrict analysis to specific `app_version` values, (4) quantify the impact of the current failure-related events defined in the repository, or (5) produce a concise reliability report with fix suggestions.
 ---
 
 # Aptabase Analytics Report
 
 ## Overview
 
-Use this skill to export Aptabase telemetry from the Audire repo, trim day-granularity exports to an exact time window, and produce a reliability report from the CSV with inline `uv` + pandas commands.
+Use this skill to export Aptabase telemetry from the ShiorikoTrans repo, trim day-granularity exports to an exact time window, and produce a reliability report from the CSV with inline `uv` + pandas commands.
 
 ## Prerequisites
 

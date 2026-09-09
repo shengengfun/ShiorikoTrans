@@ -1,6 +1,6 @@
-appId: com.audire.electron
-productName: Audire
-copyright: MIT License - Original audire by thewh1teagle, Electron migration
+appId: com.shiorikotrans.electron
+productName: ShiorikoTrans
+copyright: MIT License - Original shiorikotrans by thewh1teagle, Electron migration
 
 directories:
   output: dist-release
@@ -64,5 +64,5 @@ linux:
 
 publish:
   provider: github
-  owner: audire-electron
-  repo: audire-electron
+  owner: shiorikotrans-electron
+  repo: shiorikotrans-electron

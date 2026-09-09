@@ -1,14 +1,14 @@
-# Contributing to Audire
+# Contributing to ShiorikoTrans
 
 Thanks for thinking about contributing! 🎉
 
 ## What We Focus On
 
-This repo contains the core Audire transcription app and examples.  
+This repo contains the core ShiorikoTrans transcription app and examples.  
 Our goals: improve the app, add useful examples, fix bugs, and keep the codebase minimal and clean.  
 We avoid unnecessary complexity and try to keep things straightforward.
 
-Before contributing, **please open a [new issue](https://github.com/audire/audire/issues)** to discuss your idea **before** starting any work.  
+Before contributing, **please open a [new issue](https://github.com/shiorikotrans/shiorikotrans/issues)** to discuss your idea **before** starting any work.  
 This keeps contributions aligned with the project and avoids wasted effort.
 
 ✅ **Exception:**  
@@ -21,7 +21,7 @@ If you're fixing a clear **critical bug**, you may open a PR without prior discu
 - If you're fixing a **critical bug**, you may skip issue discussion — but the PR must contain **only the relevant fix** (no refactors, no formatting changes).
 - If your change affects core logic or behavior, include a short explanation or example in the PR description.
 
-## AI-Assisted (Audire Coding) PRs
+## AI-Assisted (ShiorikoTrans Coding) PRs
 
 We welcome PRs written with AI tools! Just hold them to the same standard as any other PR:
 

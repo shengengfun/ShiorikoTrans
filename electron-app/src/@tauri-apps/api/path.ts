@@ -19,11 +19,11 @@ export async function resolveResource(resourcePath: string): Promise<string> {
 export async function appLocalDataDir(): Promise<string> {
 	// In Electron, app data is handled by main process
 	// Return a sensible default for browser context
-	return '/tmp/audire-data'
+	return '/tmp/shiorikotrans-data'
 }
 export async function appConfigDir(): Promise<string> {
-	return '/tmp/audire-config'
+	return '/tmp/shiorikotrans-config'
 }
 export async function documentDir(): Promise<string> {
-	return '/tmp/audire-documents'
+	return '/tmp/shiorikotrans-documents'
 }

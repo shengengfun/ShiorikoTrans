@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import * as pathExt from '@tauri-apps/api/path'
 import * as fsExt from '@tauri-apps/plugin-fs'
+import { transcriptionModelsDir } from './model-paths'
 
 export const MODEL_EXTENSIONS = ['bin', 'gguf', 'onnx', 'pt', 'pth', 'safetensors', 'ckpt'] as const
 export type ModelExtension = (typeof MODEL_EXTENSIONS)[number]
@@ -45,10 +46,11 @@ export async function downloadModel(url: string) {
 		filename = 'ggml-model.bin'
 	}
 	const modelsFolder = await invoke<string>('get_models_folder')
-	let modelPath = await pathExt.join(modelsFolder, filename)
+	const modelsDir = await transcriptionModelsDir(modelsFolder)
+	let modelPath = await pathExt.join(modelsDir, filename)
 	if (await fsExt.exists(modelPath)) {
 		filename = randomString(8, 'ggml-model_', `.${getModelExtension(filename) ?? 'bin'}`)
-		modelPath = await pathExt.join(modelsFolder, filename)
+		modelPath = await pathExt.join(modelsDir, filename)
 	}
 	const result = await invoke<DownloadModelResult>('download_model', { url, path: modelPath })
 	return result.status === 'completed' ? result.path : null

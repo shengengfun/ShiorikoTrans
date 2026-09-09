@@ -1,4 +1,4 @@
-use crate::ffmpeg::get_audire_temp_folder;
+use crate::ffmpeg::get_shiorikotrans_temp_folder;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{Device, FromSample, Sample, SizedSample, Stream, SupportedStreamConfig};
 use eyre::{bail, eyre, Context, ContextCompat, Result};
@@ -93,7 +93,7 @@ pub async fn start_record(
         };
         let spec = wav_spec_from_config(&config);
 
-        let path = get_audire_temp_folder().join(format!("{}.wav", random_string(10)));
+        let path = get_shiorikotrans_temp_folder().join(format!("{}.wav", random_string(10)));
         tracing::debug!("WAV file path: {:?}", path);
         wav_paths.push((path.clone(), 0));
 
@@ -133,7 +133,7 @@ pub async fn start_record(
         let dst = if wav_paths.len() == 1 {
             wav_paths[0].0.clone()
         } else if wav_paths[0].1 > 0 && wav_paths[1].1 > 0 {
-            let dst = get_audire_temp_folder().join(format!("{}.wav", random_string(10)));
+            let dst = get_shiorikotrans_temp_folder().join(format!("{}.wav", random_string(10)));
             tracing::debug!("Merging WAV files");
             crate::ffmpeg::merge_wav_files(wav_paths[0].0.clone(), wav_paths[1].0.clone(), dst.clone()).map_err(|e| eyre!("{e:?}")).log_error();
             dst
@@ -152,7 +152,7 @@ pub async fn start_record(
             .map(crate::cmd::files::sanitize_filename_stem)
             .filter(|name| !name.is_empty())
             .unwrap_or_else(get_local_time);
-        let temp_dir = get_audire_temp_folder();
+        let temp_dir = get_shiorikotrans_temp_folder();
         let mut normalized = crate::cmd::files::available_path(&temp_dir, &recording_stem, "wav");
         crate::ffmpeg::normalize(dst.clone(), normalized.clone(), None).map_err(|e| eyre!("{e:?}")).log_error();
 

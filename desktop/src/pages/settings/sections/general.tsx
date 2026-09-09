@@ -13,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { SectionCard, type SettingsViewModel } from './shared'
 
 export function GeneralSection({ vm }: { vm: SettingsViewModel }) {
-	const themeLabels = { light: m.light, dark: m.dark } as const
-
 	return (
 		<div className="space-y-5">
 			<SectionCard>
@@ -34,15 +32,6 @@ export function GeneralSection({ vm }: { vm: SettingsViewModel }) {
 							</SelectContent>
 						</Select>
 					</div>
-					<div className="space-y-2 pt-4 sm:ps-5 sm:pt-0">
-						<Label>{m.theme()}</Label>
-						<Select value={vm.preference.theme} onValueChange={(value) => vm.preference.setTheme(value as 'light' | 'dark')}>
-							<SelectTrigger className="capitalize"><SelectValue placeholder={m.selectTheme()} /></SelectTrigger>
-							<SelectContent>
-								{config.themes.map((theme) => <SelectItem key={theme} value={theme} className="capitalize">{themeLabels[theme as keyof typeof themeLabels]()}</SelectItem>)}
-							</SelectContent>
-						</Select>
-					</div>
 				</div>
 			</SectionCard>
 
@@ -53,7 +42,7 @@ export function GeneralSection({ vm }: { vm: SettingsViewModel }) {
 				<Button variant="ghost" onMouseDown={vm.reportIssue} className="h-12 w-full justify-between rounded-none px-4 font-medium first:rounded-t-2xl last:rounded-b-2xl hover:bg-accent/55">
 					{m.reportIssue()} <GithubIcon className="h-4 w-4 text-muted-foreground" />
 				</Button>
-				<Button variant="ghost" onMouseDown={() => openUrl(config.supportaudireURL)} className="h-12 w-full justify-between rounded-none px-4 font-medium first:rounded-t-2xl last:rounded-b-2xl hover:bg-accent/55">
+				<Button variant="ghost" onMouseDown={() => openUrl(config.supportShiorikoTransURL)} className="h-12 w-full justify-between rounded-none px-4 font-medium first:rounded-t-2xl last:rounded-b-2xl hover:bg-accent/55">
 					{m.supportTheProject()} <HeartIcon className="h-4 w-4 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" />
 				</Button>
 				<Button variant="ghost" onMouseDown={() => openUrl(config.discordURL)} className="h-12 w-full justify-between rounded-none px-4 font-medium first:rounded-t-2xl last:rounded-b-2xl hover:bg-accent/55">

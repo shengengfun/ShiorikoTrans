@@ -18,7 +18,7 @@ import httpx
 
 RELEASES_PATH = Path(__file__).resolve().parent.parent / "website/src/lib/latest_release.json"
 OWNER = "thewh1teagle"
-REPO = "audire"
+REPO = "shiorikotrans"
 BLACKLIST_PATTERNS = ["opencl", "nvidia", "older", ".rpm", "portable", "cuda", "ubuntu", "setup_", "arm64-setup"]
 VALID_EXTENSION_RE = re.compile(r"\.(sig|json|zip|tar\.gz)$")
 

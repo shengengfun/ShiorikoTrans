@@ -1,8 +1,8 @@
-# Audire Architecture
+# ShiorikoTrans Architecture
 
 ## Overview
 
-Audire is a desktop transcription app built with **Tauri** (Rust + TypeScript frontend).
+ShiorikoTrans is a desktop transcription app built with **Tauri** (Rust + TypeScript frontend).
 
 ## Components
 
@@ -19,24 +19,24 @@ Audire is a desktop transcription app built with **Tauri** (Rust + TypeScript fr
 - **Location**: Separate repository at `github.com/thewh1teagle/sona` (also cloned locally in `./sona`)
 - **Purpose**: Single local runner process for audio transcription, model loading, streaming, and diarization
 - Bundled as one `sona` binary sidecar with the desktop app
-- Diarization is in-process in Sona via `diarize-rs`; Audire does not bundle or spawn a separate `sona-diarize` binary
+- Diarization is in-process in Sona via `diarize-rs`; ShiorikoTrans does not bundle or spawn a separate `sona-diarize` binary
 - **Build**: Separate CI/CD in sona repository
-- **Distribution**: Pre-built Sona binaries downloaded during Audire build (see `scripts/pre_build.py`)
+- **Distribution**: Pre-built Sona binaries downloaded during ShiorikoTrans build (see `scripts/pre_build.py`)
 
 ### FFmpeg Helper
 
 - macOS and Windows builds also bundle `ffmpeg` from the Sona release archives
-- Audire passes its path to Sona with `SONA_FFMPEG_PATH`
+- ShiorikoTrans passes its path to Sona with `SONA_FFMPEG_PATH`
 
 ### Build Flow
 
-1. Audire CI runs `scripts/pre_build.py`
+1. ShiorikoTrans CI runs `scripts/pre_build.py`
 2. Script downloads pre-built Sona binaries from Sona releases
 3. Binaries placed in `desktop/src-tauri/binaries/`
 4. Tauri bundles `sona` and, where configured, `ffmpeg` into the final app
 
 ## Key Point for Agents
 
-Native runtime compatibility issues for transcription usually come from the Sona runner or its linked whisper/ggml libraries, not the Audire UI code.
+Native runtime compatibility issues for transcription usually come from the Sona runner or its linked whisper/ggml libraries, not the ShiorikoTrans UI code.
 
-To fix Sona runtime compatibility issues, update **Sona's** build configuration in the Sona repository, then bump `.sona-version` in Audire.
+To fix Sona runtime compatibility issues, update **Sona's** build configuration in the Sona repository, then bump `.sona-version` in ShiorikoTrans.

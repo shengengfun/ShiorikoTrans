@@ -183,7 +183,7 @@ to manually configure your team for notarization.
 Once the status shows **Accepted**, staple the ticket manually:
 
 ```bash
-xcrun stapler staple /path/to/audire.app
+xcrun stapler staple /path/to/shiorikotrans.app
 ```
 
 Stapling is per `.app` bundle — it covers all binaries inside it. No need to staple

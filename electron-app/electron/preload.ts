@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 // Bridge API exposed to the renderer process
-// This replaces @tauri-apps/api patterns used by audire
+// This replaces @tauri-apps/api patterns used by shiorikotrans
 
 const electronAPI = {
 	// Core invoke replacement
@@ -183,7 +183,7 @@ const electronAPI = {
 
 	// App info
 	appInfo: {
-		name: 'audire-electron',
+		name: 'shiorikotrans-electron',
 		version: '0.0.0',
 	},
 }

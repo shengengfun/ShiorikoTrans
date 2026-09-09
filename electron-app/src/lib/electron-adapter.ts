@@ -1,7 +1,7 @@
 /**
  * Adapter layer: Replaces @tauri-apps/api imports with Electron equivalents.
  *
- * This file provides drop-in replacements for Tauri APIs used by audire,
+ * This file provides drop-in replacements for Tauri APIs used by shiorikotrans,
  * enabling the frontend to work unchanged with Electron as the desktop shell.
  */
 
@@ -53,7 +53,7 @@ async function checkBackendHealth(): Promise<boolean> {
 
 /**
  * Send audio file to FunASR backend for transcription.
- * Returns audire-compatible Transcript format.
+ * Returns shiorikotrans-compatible Transcript format.
  */
 async function transcribeViaFunASR(options: any): Promise<any> {
 	const { path, lang, word_timestamps, max_sentence_len } = options || {}
@@ -102,9 +102,9 @@ async function transcribeViaFunASR(options: any): Promise<any> {
 
 	const result = await res.json()
 
-	// Convert to audire-compatible Transcript format
+	// Convert to shiorikotrans-compatible Transcript format
 	// FunASR returns segments with start/stop in seconds
-	// Audire expects start/stop as hundredths of a second (multiplied by 100)
+	// ShiorikoTrans expects start/stop as hundredths of a second (multiplied by 100)
 	return {
 		segments: (result.segments || []).map((seg: any) => ({
 			start: Math.round((seg.start || 0) * 100),
@@ -528,7 +528,7 @@ export const app = {
 	},
 	async getName(): Promise<string> {
 		const api = getElectronAPI()
-		return api?.appInfo?.name || 'audire'
+		return api?.appInfo?.name || 'shiorikotrans'
 	},
 }
 

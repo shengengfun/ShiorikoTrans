@@ -11,7 +11,7 @@ import AudioDeviceInput from '~/components/audio-device-input'
 import { ReactComponent as FileIcon } from '~/icons/file.svg'
 import { ReactComponent as MicrphoneIcon } from '~/icons/microphone.svg'
 import { ReactComponent as LinkIcon } from '~/icons/link.svg'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { webviewWindow } from '@tauri-apps/api'
 import * as keepAwake from 'tauri-plugin-keepawake-api'
 import { Button } from '~/components/ui/button'
@@ -26,6 +26,7 @@ import ResummarizeDialog from '~/components/resummarize-dialog'
 
 export default function Home() {
 	const vm = viewModel()
+	const [showBilingual, setShowBilingual] = useState(false)
 
 	async function showWindow() {
 		const currentWindow = webviewWindow.getCurrentWebviewWindow()
@@ -39,8 +40,10 @@ export default function Home() {
 
 	return (
 		<Layout>
-			<div className="mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-6">
-				<div className="app-main-card mx-auto flex w-full min-w-0 max-w-3xl flex-col items-center gap-5">
+			<div className="mx-auto flex w-full min-w-0 flex-col gap-6">
+				<div className="grid w-full min-w-0 items-start gap-6 md:grid-cols-[minmax(300px,400px)_minmax(0,1fr)]">
+					<div className="min-w-0">
+						<div className="app-main-card flex w-full min-w-0 flex-col items-center gap-5">
 					<Tabs
 						value={vm.preference.homeTab}
 						onValueChange={(v) => (v === 'link' ? vm.switchToLinkTab() : vm.preference.setHomeTab(v as HomeTab))}
@@ -66,12 +69,12 @@ export default function Home() {
 
 					{vm.preference.homeTab === "record" && (
 						<div className="w-full min-w-0 max-w-2xl space-y-5">
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<div className="grid grid-cols-1 gap-4">
 								<AudioDeviceInput device={vm.inputDevice} setDevice={vm.setInputDevice} devices={vm.devices} type="input" />
 								<AudioDeviceInput device={vm.outputDevice} setDevice={vm.setOutputDevice} devices={vm.devices} type="output" />
 							</div>
 
-							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<div className="grid grid-cols-1 gap-4">
 								<div className="space-y-2">
 									<Label>{m.recordingName()}</Label>
 									<Input
@@ -246,9 +249,10 @@ export default function Home() {
 							)}
 						</div>
 					)}
+					</div>
 				</div>
-
-				{vm.preference.homeTab === "file" && !vm.loading && (vm.summarizeSegments || vm.translatedSegments) && (
+				<div className="flex min-w-0 flex-col gap-5 md:sticky md:top-6 md:max-h-[calc(100dvh-9rem)] md:self-start md:w-full md:overflow-y-auto">
+					{vm.preference.homeTab === "file" && !vm.loading && (vm.summarizeSegments || vm.translatedSegments) && (
 					<div className="flex items-center justify-center gap-2">
 						<Tabs value={vm.transcriptTab} onValueChange={(v) => vm.setTranscriptTab(v as 'transcript' | 'summary')}>
 							<TabsList className="rounded-xl">
@@ -258,19 +262,29 @@ export default function Home() {
 							</TabsList>
 						</Tabs>
 						<ResummarizeDialog onSubmit={vm.resummarize} loading={vm.summarizing} />
+						{vm.translatedSegments && (
+							<Button
+								variant={showBilingual ? 'secondary' : 'ghost'}
+								size="sm"
+								className="rounded-xl"
+								onClick={() => setShowBilingual((value) => !value)}>
+								双语
+							</Button>
+						)}
 					</div>
 				)}
 
-				{vm.preference.homeTab === "file" && (vm.segments || vm.loading) && (
-					<div className="mx-auto flex h-[62vh] min-h-[320px] w-full max-w-4xl min-w-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lg dark:shadow-2xl">
+				{vm.preference.homeTab === "file" && (vm.segments || vm.loading) ? (
+					<div className="flex h-[62vh] min-h-[340px] w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lg dark:shadow-2xl">
 						<TextArea
 							file={vm.files[0]}
 							placeholder={m.transcriptWillDisplayedShortly()}
 							segments={
-								vm.transcriptTab === 'transcript' ? vm.segments :
+								showBilingual || vm.transcriptTab === 'transcript' ? vm.segments :
 								vm.transcriptTab === 'translated' ? vm.translatedSegments :
 								vm.summarizeSegments
 							}
+							bilingual={showBilingual ? vm.translatedSegments : null}
 							textFormat={
 								vm.transcriptTab === 'transcript' ? vm.preference.textFormatTranscript :
 								vm.transcriptTab === 'translated' ? vm.preference.textFormatTranscript :
@@ -284,7 +298,13 @@ export default function Home() {
 							readonly={vm.loading}
 						/>
 					</div>
+				) : (
+					<div className="flex h-[62vh] min-h-[340px] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/50 bg-card/40 p-8 text-center">
+						<p className="text-base text-muted-foreground">{m.transcriptWillDisplayedShortly()}</p>
+					</div>
 				)}
+				</div>
+				</div>
 			</div>
 		</Layout>
 	)

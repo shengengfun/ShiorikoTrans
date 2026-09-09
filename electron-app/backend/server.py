@@ -1,5 +1,5 @@
 """
-FunASR Server for Audire Electron
+FunASR Server for ShiorikoTrans Electron
 ================================
 Provides HTTP REST + WebSocket API for speech recognition using FunASR models.
 
@@ -31,7 +31,7 @@ log = logging.getLogger("funasr-server")
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-MODELS_DIR = Path(os.environ.get("FUNASR_MODELS_DIR", os.path.expanduser("~/.cache/audire/models")))
+MODELS_DIR = Path(os.environ.get("FUNASR_MODELS_DIR", os.path.expanduser("~/.cache/shiorikotrans/models")))
 PORT = int(os.environ.get("FUNASR_PORT", "8000"))
 HOST = os.environ.get("FUNASR_HOST", "127.0.0.1")
 
@@ -46,7 +46,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-app = FastAPI(title="Audire FunASR Server", version="1.0.0")
+app = FastAPI(title="ShiorikoTrans FunASR Server", version="1.0.0")
 
 # Allow CORS (needed for Electron file:// protocol)
 app.add_middleware(
@@ -205,7 +205,7 @@ async def transcribe(
     """
     Transcribe an audio file.
     
-    Returns JSON with format compatible with audire's Transcript interface:
+    Returns JSON with format compatible with shiorikotrans's Transcript interface:
     {
         "segments": [
             {"start": 0.0, "stop": 2.5, "text": "Hello world", "speaker": null},
@@ -241,7 +241,7 @@ async def transcribe(
         log.info(f"Transcribing: {file.filename} (language={language})")
         result = model.generate(input=audio_path, **gen_kwargs)
 
-        # Parse FunASR result into audire-compatible format
+        # Parse FunASR result into shiorikotrans-compatible format
         segments = []
 
         if result and len(result) > 0:

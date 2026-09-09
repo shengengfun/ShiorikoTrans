@@ -2,6 +2,7 @@ import { ReactNode, SetStateAction, createContext, useContext, useEffect, useRef
 import { useLocalStorage } from 'usehooks-ts'
 import { load } from '@tauri-apps/plugin-store'
 import * as config from '~/lib/config'
+import { applyAccentColor, backgroundOverlay } from '~/lib/appearance'
 import { TextFormat } from '~/components/format-select'
 import { ModifyState } from '~/lib/types'
 import { supportedLanguages } from '~/lib/i18n'
@@ -9,12 +10,18 @@ import { getLocale, getTextDirection, setLocale } from '~/paraglide/runtime.js'
 import { m } from '~/paraglide/messages.js'
 import { defaultOllamaConfig, LlmConfig } from '~/lib/llm'
 import { message } from '@tauri-apps/plugin-dialog'
-import { invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { ModelMetadata } from '~/lib/model'
 import { getModelPipeline, ModelPipeline, ModelType } from '~/lib/model-pipeline'
 
 type Direction = 'ltr' | 'rtl'
 export type HomeTab = 'record' | 'file' | 'link'
+
+export interface RecentFile {
+	name: string
+	path: string
+	ts: number
+}
 
 export interface AdvancedTranscribeOptions {
 	includeSubFolders: boolean
@@ -48,6 +55,15 @@ export interface Preference {
 	setModelOptions: ModifyState<ModelOptions>
 	theme: 'light' | 'dark'
 	setTheme: ModifyState<'light' | 'dark'>
+	accentPreset: string
+	setAccentPreset: ModifyState<string>
+	accentCustomColor: string | null
+	setAccentCustomColor: ModifyState<string | null>
+	customBackground: string | null
+	setCustomBackground: ModifyState<string | null>
+	recentFiles: RecentFile[]
+	setRecentFiles: ModifyState<RecentFile[]>
+	addRecentFile: (name: string, path: string) => void
 	storeRecordInDocuments: boolean
 	setStoreRecordInDocuments: ModifyState<boolean>
 	customRecordingPath: string | null
@@ -176,6 +192,18 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [textFormatSummary, setTextFormatSummary] = useLocalStorage<TextFormat>('prefs_text_format_summary', 'md')
 	const isMounted = useRef<boolean>(false)
 	const [theme, setTheme] = useLocalStorage<'dark' | 'light'>('prefs_theme', systemIsDark ? 'dark' : 'light')
+	const [accentPreset, setAccentPreset] = useLocalStorage<string>('prefs_accent_preset', 'blue')
+	const [accentCustomColor, setAccentCustomColor] = useLocalStorage<string | null>('prefs_accent_custom_color', null)
+	const [customBackground, setCustomBackground] = useLocalStorage<string | null>('prefs_custom_background', null)
+	const [recentFiles, setRecentFiles] = useLocalStorage<RecentFile[]>('prefs_recent_files', [])
+
+	function addRecentFile(name: string, path: string) {
+		if (!path) return
+		setRecentFiles((prev) => {
+			const entry: RecentFile = { name: name || path.split(/[\\/]/).pop() || path, path, ts: Date.now() }
+			return [entry, ...(prev ?? []).filter((f) => f.path !== path)].slice(0, 12)
+		})
+	}
 	const [homeTab, setHomeTab] = useLocalStorage<HomeTab>('prefs_home_tab', 'file')
 
 	const [soundOnFinish, setSoundOnFinish] = useLocalStorage('prefs_sound_on_finish', defaultOptions.soundOnFinish)
@@ -260,6 +288,25 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		}
 	}, [theme])
 
+	// Accent color (preset palette or custom hex)
+	useEffect(() => {
+		applyAccentColor(accentPreset, accentCustomColor, theme)
+	}, [accentPreset, accentCustomColor, theme])
+
+	// Custom background image behind the (translucent) cards
+	useEffect(() => {
+		const body = document.body
+		if (customBackground) {
+			const url = convertFileSrc(customBackground)
+			body.style.backgroundImage = `${backgroundOverlay(theme, 1)}, url("${url}")`
+			body.style.backgroundSize = 'cover'
+			body.style.backgroundPosition = 'center'
+			body.style.backgroundAttachment = 'fixed'
+		} else {
+			body.style.backgroundImage = ''
+		}
+	}, [customBackground, theme])
+
 	function setLanguageDefaults() {
 		if (supportedLanguages[preference.displayLanguage]) {
 			preference.setModelOptions({ ...preference.modelOptions, lang: preference.displayLanguage.split('-')[0].toLowerCase() })
@@ -341,6 +388,15 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setModelDisplayNames,
 		theme,
 		setTheme,
+		accentPreset,
+		setAccentPreset,
+		accentCustomColor,
+		setAccentCustomColor,
+		customBackground,
+		setCustomBackground,
+		recentFiles,
+		setRecentFiles,
+		addRecentFile,
 		homeTab,
 		setHomeTab,
 		ffmpegOptions,

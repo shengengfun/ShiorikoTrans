@@ -7,11 +7,11 @@
 		{
 			"type": "lldb",
 			"request": "launch",
-			"name": "Debug executable 'audire'",
+			"name": "Debug executable 'shiorikotrans'",
 			"cargo": {
-				"args": ["build", "--bin=audire", "--package=audire"],
+				"args": ["build", "--bin=shiorikotrans", "--package=shiorikotrans"],
 				"filter": {
-					"name": "audire",
+					"name": "shiorikotrans",
 					"kind": "bin"
 				}
 			},
@@ -21,11 +21,11 @@
 		{
 			"type": "lldb",
 			"request": "launch",
-			"name": "Debug executable 'audire' in Release mode",
+			"name": "Debug executable 'shiorikotrans' in Release mode",
 			"cargo": {
-				"args": ["build", "--bin=audire", "--package=audire", "--release"],
+				"args": ["build", "--bin=shiorikotrans", "--package=shiorikotrans", "--release"],
 				"filter": {
-					"name": "audire",
+					"name": "shiorikotrans",
 					"kind": "bin"
 				},
 				"env": {
@@ -42,11 +42,11 @@
 		{
 			"type": "lldb",
 			"request": "launch",
-			"name": "Debug unit tests in executable 'audire'",
+			"name": "Debug unit tests in executable 'shiorikotrans'",
 			"cargo": {
-				"args": ["test", "--no-run", "--bin=audire", "--package=audire"],
+				"args": ["test", "--no-run", "--bin=shiorikotrans", "--package=shiorikotrans"],
 				"filter": {
-					"name": "audire",
+					"name": "shiorikotrans",
 					"kind": "bin"
 				}
 			},

@@ -42,8 +42,8 @@ import httpx
 # Whitelist patterns - only these get signed
 # TODO: restore whitelist when patterns are finalized
 # SIGN_PATTERNS = [
-#     "audire.exe",
-#     "audire*setup*.exe",
+#     "shiorikotrans.exe",
+#     "shiorikotrans*setup*.exe",
 #     "sona*.exe",
 # ]
 SIGN_PATTERNS = ["*"]

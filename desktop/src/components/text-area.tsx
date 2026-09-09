@@ -66,6 +66,7 @@ export default function TextArea({
 	file,
 	textFormat,
 	setTextFormat,
+	bilingual,
 }: {
 	segments: Segment[] | null
 	readonly: boolean
@@ -73,11 +74,19 @@ export default function TextArea({
 	file: NamedPath
 	textFormat: TextFormat
 	setTextFormat: Dispatch<SetStateAction<TextFormat>>
+	bilingual?: Segment[] | null
 }) {
 	const preference = usePreferenceProvider()
 	const [text, setText] = useState('')
 
 	const speakerLabel = m.speakerPrefix()
+
+	// Bilingual (原文 + 译文双行) support. Falls back to plain text otherwise.
+	const bilingualActive = !!bilingual && !!segments
+	const bilingualMap = new Map((bilingual ?? []).map((t) => [t.start, t.text] as const))
+	const displayText = bilingualActive
+		? (segments?.map((s) => `${s.text}\n${bilingualMap.get(s.start) ?? ''}`).join('\n\n') ?? text)
+		: text
 	useEffect(() => {
 		if (segments) {
 			setText(
@@ -134,11 +143,11 @@ export default function TextArea({
 	return (
 		<div className="flex h-full w-full min-w-0 flex-col overflow-hidden">
 			<div className="flex w-full shrink-0 flex-wrap items-center gap-1 rounded-tl-lg rounded-tr-lg bg-muted p-1">
-				<CopyButton text={text} />
+				<CopyButton text={displayText} />
 
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button variant="ghost" size="icon" onMouseDown={() => download(text, textFormat, file)}>
+						<Button variant="ghost" size="icon" onMouseDown={() => download(displayText, textFormat, file)}>
 							<Download className="h-5 w-5" strokeWidth={2.1} />
 						</Button>
 					</TooltipTrigger>
@@ -191,7 +200,23 @@ export default function TextArea({
 				</div>
 			</div>
 
-			{['html', 'pdf', 'docx'].includes(textFormat) ? (
+			{bilingualActive ? (
+				<div
+					contentEditable
+					suppressContentEditableWarning
+					dir={preference.textAreaDirection}
+					className="transcript-editor min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-bl-lg rounded-br-lg border-x border-b border-input/70 bg-card px-3 py-2 text-lg leading-relaxed focus:outline-none">
+					{(segments ?? []).map((segment) => {
+						const translated = bilingualMap.get(segment.start)
+						return (
+							<div key={`${segment.start}-${segment.stop}`} className="mb-2">
+								<div className="text-muted-foreground">{segment.text}</div>
+								{translated ? <div className="text-primary">{translated}</div> : null}
+							</div>
+						)
+					})}
+				</div>
+			) : ['html', 'pdf', 'docx'].includes(textFormat) ? (
 				<div className="transcript-editor min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-bl-lg rounded-br-lg border-x border-b border-input/70 bg-card">
 					<HTMLView preference={preference} segments={segments ?? []} file={file} />
 				</div>

@@ -64,7 +64,7 @@ pub async fn show_log_path(app_handle: tauri::AppHandle) -> Result<()> {
 
 #[tauri::command]
 pub async fn show_temp_path() -> Result<()> {
-    let temp_path = ffmpeg::get_audire_temp_folder();
+    let temp_path = ffmpeg::get_shiorikotrans_temp_folder();
     showfile::show_path_in_file_manager(temp_path);
     Ok(())
 }
@@ -97,6 +97,24 @@ pub fn get_models_folder(app_handle: tauri::AppHandle) -> Result<PathBuf> {
 }
 
 #[tauri::command]
+pub fn get_system_stats() -> eyre::Result<(f32, f32)> {
+    use std::sync::{Mutex, OnceLock};
+    static SYSTEM: OnceLock<Mutex<sysinfo::System>> = OnceLock::new();
+    let sys = SYSTEM.get_or_init(|| Mutex::new(sysinfo::System::new()));
+    let mut guard = sys.lock().map_err(|_| eyre::eyre!("system stats lock poisoned"))?;
+    guard.refresh_cpu_usage();
+    guard.refresh_memory();
+    let cpu = guard.global_cpu_info().cpu_usage();
+    let total = guard.total_memory();
+    let mem = if total == 0 {
+        0.0
+    } else {
+        (guard.used_memory() as f64 / total as f64 * 100.0) as f32
+    };
+    Ok((cpu, mem))
+}
+
+#[tauri::command]
 pub fn get_logs(app_handle: tauri::AppHandle) -> Result<String> {
     let path = crate::logging::get_log_path(&app_handle)?;
     let content = std::fs::read_to_string(path)?;
@@ -105,15 +123,18 @@ pub fn get_logs(app_handle: tauri::AppHandle) -> Result<String> {
 
 #[tauri::command]
 pub fn is_crashed_recently() -> bool {
-    tracing::debug!("checking path {}", ffmpeg::get_audire_temp_folder().join("crash.txt").display());
-    ffmpeg::get_audire_temp_folder().join("crash.txt").exists()
+    tracing::debug!(
+        "checking path {}",
+        ffmpeg::get_shiorikotrans_temp_folder().join("crash.txt").display()
+    );
+    ffmpeg::get_shiorikotrans_temp_folder().join("crash.txt").exists()
 }
 
 #[tauri::command]
 pub fn rename_crash_file() -> Result<()> {
     std::fs::rename(
-        ffmpeg::get_audire_temp_folder().join("crash.txt"),
-        ffmpeg::get_audire_temp_folder().join("crash.1.txt"),
+        ffmpeg::get_shiorikotrans_temp_folder().join("crash.txt"),
+        ffmpeg::get_shiorikotrans_temp_folder().join("crash.1.txt"),
     )
     .context("Can't delete file")
 }

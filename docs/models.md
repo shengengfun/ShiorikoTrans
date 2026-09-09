@@ -1,6 +1,6 @@
-# 🌟 Audire Models 🌟
+# 🌟 ShiorikoTrans Models 🌟
 
-Welcome to the Audire Models page! Here you can find a curated list of suggested models to use with Audire. To install a model, use the "Magic Setup" link to open it in Audire, or copy and paste the direct download link in Audire settings.
+Welcome to the ShiorikoTrans Models page! Here you can find a curated list of suggested models to use with ShiorikoTrans. To install a model, use the "Magic Setup" link to open it in ShiorikoTrans, or copy and paste the direct download link in ShiorikoTrans settings.
 
 ## Available Models
 
@@ -41,15 +41,15 @@ For high accuracy and more computational resources, excels in complex scenarios.
 
 Supports streaming and is best suited for dictation.
 
-[👉 View Model](https://huggingface.co/audire-app/parakeet-tdt-0.6b-v3-gguf/tree/main)  
-[🔽 Download Q4_K_M](https://huggingface.co/audire-app/parakeet-tdt-0.6b-v3-gguf/resolve/main/parakeet-tdt-0.6b-v3-Q4_K_M.gguf?download=true)
+[👉 View Model](https://huggingface.co/shiorikotrans-app/parakeet-tdt-0.6b-v3-gguf/tree/main)  
+[🔽 Download Q4_K_M](https://huggingface.co/shiorikotrans-app/parakeet-tdt-0.6b-v3-gguf/resolve/main/parakeet-tdt-0.6b-v3-Q4_K_M.gguf?download=true)
 
 ### ⚡ Nemotron 3.5 ASR Streaming 0.6B
 
 Supports streaming and is best suited for dictation.
 
-[👉 View Model](https://huggingface.co/audire-app/nemotron-3.5-asr-streaming-0.6b-gguf)  
-[🔽 Download Q4_K_M](https://huggingface.co/audire-app/nemotron-3.5-asr-streaming-0.6b-gguf/resolve/main/nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf?download=true)
+[👉 View Model](https://huggingface.co/shiorikotrans-app/nemotron-3.5-asr-streaming-0.6b-gguf)  
+[🔽 Download Q4_K_M](https://huggingface.co/shiorikotrans-app/nemotron-3.5-asr-streaming-0.6b-gguf/resolve/main/nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf?download=true)
 
 ### Models optimised for other languages
 
@@ -75,7 +75,7 @@ Optimised for Norwegian by the [AI Lab at the National Library of Norway](https:
 [🔽 Direct Download (large)](https://huggingface.co/NbAiLab/nb-whisper-large/blob/main/ggml-model.bin?download=true)
 
 More models of smaller sizes are available via [their huggingface download page](https://huggingface.co/NbAiLab/nb-whisper-large).  
-Find the size you want, download the _ggml-model.bin_ file, rename the file, and palce it in audire's model folder.
+Find the size you want, download the _ggml-model.bin_ file, rename the file, and palce it in shiorikotrans's model folder.
 
 </details>
 
@@ -91,12 +91,12 @@ Optimised for Swedish by the [Data Lab at the National Library of Sweden](https:
 [🔽 Direct Download (large v3)](https://huggingface.co/KBLab/kb-whisper-large/blob/main/ggml-model.bin?download=true)
 
 More models of smaller sizes are available via [their huggingface download page](https://huggingface.co/KBLab/kb-whisper-large).  
-Find the size you want, download the _ggml-model.bin_ file, rename the file, and palce it in audire's model folder.
+Find the size you want, download the _ggml-model.bin_ file, rename the file, and palce it in shiorikotrans's model folder.
 
 </details>
 </details>
 
-Enjoy exploring these models and enhancing your Audire! 🌐✨
+Enjoy exploring these models and enhancing your ShiorikoTrans! 🌐✨
 
 ### Want More?
 

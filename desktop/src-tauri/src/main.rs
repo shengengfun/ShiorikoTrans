@@ -107,6 +107,7 @@ async fn main() -> Result<()> {
             cmd::audio::get_audio_devices,
             cmd::audio::start_record,
             cmd::app::get_models_folder,
+            cmd::app::get_system_stats,
             cmd::app::get_logs_folder,
             cmd::app::show_log_path,
             cmd::app::show_temp_path,
@@ -129,7 +130,26 @@ async fn main() -> Result<()> {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|_app, event| match event {
+    app.run(|app, event| match event {
+        // When the main window is closed (X button or custom window control), exit
+        // the whole app immediately. A hidden background window (e.g. the
+        // dictation indicator) would otherwise keep the process alive, which made
+        // the app impossible to quit except via the Task Manager.
+        tauri::RunEvent::WindowEvent {
+            label,
+            event: tauri::WindowEvent::CloseRequested { .. },
+            ..
+        } if label == "main" => {
+            kill_sona_process_tree();
+            std::process::exit(0);
+        }
+        tauri::RunEvent::WindowEvent {
+            label,
+            event: tauri::WindowEvent::Destroyed,
+            ..
+        } if label == "main" => {
+            app.exit(0);
+        }
         tauri::RunEvent::ExitRequested { .. } => {
             kill_sona_process_tree();
         }
@@ -167,9 +187,7 @@ fn kill_sona_process_tree() {
 
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = std::process::Command::new("kill")
-            .args(["-9", &pid.to_string()])
-            .output();
+        let _ = std::process::Command::new("kill").args(["-9", &pid.to_string()]).output();
     }
 
     sona::SONA_PID.store(0, std::sync::atomic::Ordering::SeqCst);

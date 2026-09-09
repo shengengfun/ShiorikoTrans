@@ -182,7 +182,7 @@ function createMainWindow() {
 		height: 800,
 		minWidth: 800,
 		minHeight: 600,
-		title: 'Audire',
+		title: 'ShiorikoTrans',
 		icon: join(ROOT_DIR, 'public', 'icon.png'),
 		webPreferences: {
 			preload: join(__dirname, 'preload.js'),
@@ -227,7 +227,7 @@ function createTray() {
 
 		const contextMenu = Menu.buildFromTemplate([
 			{
-				label: 'Show Audire',
+				label: 'Show ShiorikoTrans',
 				click: () => {
 					mainWindow?.show()
 					mainWindow?.focus()
@@ -242,7 +242,7 @@ function createTray() {
 			},
 		])
 
-		tray.setToolTip('Audire')
+		tray.setToolTip('ShiorikoTrans')
 		tray.setContextMenu(contextMenu)
 
 		tray.on('click', () => {
@@ -481,18 +481,18 @@ ipcMain.handle('download-model', async (_event, url: string, destPath: string) =
 
 // Get default recording path
 ipcMain.handle('get-default-recording-path', async () => {
-	return join(app.getPath('documents'), 'Audire Recordings')
+	return join(app.getPath('documents'), 'ShiorikoTrans Recordings')
 })
 
 // Check if crashed recently
 ipcMain.handle('is-crashed-recently', async () => {
-	const crashFile = join(app.getPath('temp'), 'audire-crash.txt')
+	const crashFile = join(app.getPath('temp'), 'shiorikotrans-crash.txt')
 	return existsSync(crashFile)
 })
 
 // Rename crash file
 ipcMain.handle('rename-crash-file', async () => {
-	const crashFile = join(app.getPath('temp'), 'audire-crash.txt')
+	const crashFile = join(app.getPath('temp'), 'shiorikotrans-crash.txt')
 	if (existsSync(crashFile)) {
 		renameSync(crashFile, crashFile + '.old')
 	}
@@ -631,7 +631,7 @@ ipcMain.handle('stop-keep-awake', async () => {
 // ==================== App lifecycle ====================
 
 app.whenReady().then(async () => {
-	console.log('Audire Electron app starting...')
+	console.log('ShiorikoTrans Electron app starting...')
 
 	// Start Python backend
 	try {

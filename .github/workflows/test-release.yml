@@ -16,15 +16,15 @@ jobs:
       matrix:
         include:
           - runner: macos-14
-            pattern: audire_aarch64.app.tar.gz
+            pattern: shiorikotrans_aarch64.app.tar.gz
           - runner: macos-15-intel
-            pattern: audire_x64.app.tar.gz
+            pattern: shiorikotrans_x64.app.tar.gz
           - runner: ubuntu-24.04
-            pattern: "audire_*_amd64.deb"
+            pattern: "shiorikotrans_*_amd64.deb"
           - runner: ubuntu-24.04-arm
-            pattern: "audire_*_arm64.deb"
+            pattern: "shiorikotrans_*_arm64.deb"
           - runner: windows-latest
-            pattern: "audire_*_x64-setup.exe"
+            pattern: "shiorikotrans_*_x64-setup.exe"
 
     runs-on: ${{ matrix.runner }}
     steps:
@@ -65,19 +65,19 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           tar xzf ${{ matrix.pattern }}
-          ./audire.app/Contents/MacOS/audire transcribe ggml-tiny.bin samples/short.mp4
+          ./shiorikotrans.app/Contents/MacOS/shiorikotrans transcribe ggml-tiny.bin samples/short.mp4
 
       - name: Install and test (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ./${{ matrix.pattern }}
-          xvfb-run -a audire transcribe ggml-tiny.bin samples/short.mp4
+          xvfb-run -a shiorikotrans transcribe ggml-tiny.bin samples/short.mp4
 
       - name: Install and test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $installer = (Get-Item audire_*_x64-setup.exe).FullName
+          $installer = (Get-Item shiorikotrans_*_x64-setup.exe).FullName
           Start-Process -FilePath $installer -ArgumentList "/S" -Wait
-          & "$env:LOCALAPPDATA\audire\audire.exe" transcribe ggml-tiny.bin samples\short.mp4
+          & "$env:LOCALAPPDATA\shiorikotrans\shiorikotrans.exe" transcribe ggml-tiny.bin samples\short.mp4

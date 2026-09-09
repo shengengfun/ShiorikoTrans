@@ -3,7 +3,7 @@
 ## Goal
 
 Add Tencent **Hunyuan-Audio** (腾讯混元音频) — an ASR + audio-understanding model —
-to Audire/sona. This plan covers (1) what has been scaffolded already, (2) how to
+to ShiorikoTrans/sona. This plan covers (1) what has been scaffolded already, (2) how to
 obtain the model, and (3) the design for a dedicated Rust inference engine.
 
 **Status: 兼容识别 + 下载入口已就绪；推理引擎尚未实现（本计划为其设计）。**

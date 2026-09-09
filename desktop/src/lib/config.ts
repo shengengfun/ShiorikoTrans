@@ -1,27 +1,35 @@
-export const aboutURL = 'https://thewh1teagle.github.io/audire/'
-export const updateVersionURL = 'https://github.com/thewh1teagle/audire/releases/latest'
-export const modelsDocURL = 'https://thewh1teagle.github.io/audire/docs#models'
+export const aboutURL = 'https://thewh1teagle.github.io/shiorikotrans/'
+export const updateVersionURL = 'https://github.com/thewh1teagle/shiorikotrans/releases/latest'
+export const modelsDocURL = 'https://thewh1teagle.github.io/shiorikotrans/docs#models'
 export const discordURL = 'https://discord.gg/EcxWSstQN8'
-export const unsupportedCpuReadmeURL = 'https://thewh1teagle.github.io/audire/docs#install'
-export const supportaudireURL = 'https://thewh1teagle.github.io/audire/?action=support-audire'
-export const privacyPolicyURL = 'https://thewh1teagle.github.io/audire/?action=open-privacy-policy'
+export const unsupportedCpuReadmeURL = 'https://thewh1teagle.github.io/shiorikotrans/docs#install'
+export const supportShiorikoTransURL = 'https://thewh1teagle.github.io/shiorikotrans/?action=support-shiorikotrans'
+export const privacyPolicyURL = 'https://thewh1teagle.github.io/shiorikotrans/?action=open-privacy-policy'
 export const storeFilename = 'app_config.json'
-export const latestReleaseURL = 'https://github.com/thewh1teagle/audire/releases/latest'
-export const latestVersionWithoutVulkan = 'https://github.com/thewh1teagle/audire/releases/download/v2.4.0/audire_2.4.0_x64-setup.exe'
+
+/** Purpose sub-folders used to organize models inside the models folder. */
+export const modelSubdirs = {
+	transcribe: 'transcribe',
+	translate: 'translate',
+	vad: 'vad',
+	diarize: 'diarize',
+} as const
+export const latestReleaseURL = 'https://github.com/thewh1teagle/shiorikotrans/releases/latest'
+export const latestVersionWithoutVulkan = 'https://github.com/thewh1teagle/shiorikotrans/releases/download/v2.4.0/shiorikotrans_2.4.0_x64-setup.exe'
 
 export const modelUrls = {
 	default: [
 		'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin',
-		'https://huggingface.co/audire-app/whisper-large-v3-turbo-gguf/resolve/main/ggml-large-v3-turbo.bin', // Hugging Face fallback
-		'https://github.com/thewh1teagle/audire/releases/download/model-files-v1.0/ggml-large-v3-turbo.bin', // GitHub fallback
+		'https://huggingface.co/shiorikotrans-app/whisper-large-v3-turbo-gguf/resolve/main/ggml-large-v3-turbo.bin', // Hugging Face fallback
+		'https://github.com/thewh1teagle/shiorikotrans/releases/download/model-files-v1.0/ggml-large-v3-turbo.bin', // GitHub fallback
 	],
 	hebrew: ['https://huggingface.co/ivrit-ai/whisper-large-v3-turbo-ggml/resolve/main/ggml-model.bin'],
 }
 
 export const embeddingModelFilename = 'wespeaker_en_voxceleb_CAM++.onnx'
 export const segmentModelFilename = 'segmentation-3.0.onnx'
-export const embeddingModelUrl = 'https://github.com/thewh1teagle/audire/releases/download/v0.0.1/wespeaker_en_voxceleb_CAM++.onnx'
-export const segmentModelUrl = 'https://github.com/thewh1teagle/audire/releases/download/v0.0.1/segmentation-3.0.onnx'
+export const embeddingModelUrl = 'https://github.com/thewh1teagle/shiorikotrans/releases/download/v0.0.1/wespeaker_en_voxceleb_CAM++.onnx'
+export const segmentModelUrl = 'https://github.com/thewh1teagle/shiorikotrans/releases/download/v0.0.1/segmentation-3.0.onnx'
 
 export const diarizeModelFilename = 'diar_streaming_sortformer_4spk-v2.1.onnx'
 export const diarizeModelUrl = 'https://huggingface.co/altunenes/parakeet-rs/resolve/main/diar_streaming_sortformer_4spk-v2.1.onnx'

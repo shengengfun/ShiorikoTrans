@@ -316,7 +316,7 @@ export default function SettingsPage({ setVisible }: SettingsPageProps) {
 								</Button>
 								<Button
 									variant="ghost"
-									onMouseDown={() => openUrl(config.supportAudireURL)}
+									onMouseDown={() => openUrl(config.supportShiorikoTransURL)}
 									className="h-12 w-full justify-between rounded-none px-4 font-medium first:rounded-t-lg last:rounded-b-lg hover:bg-accent/55">
 									{t('common.support-the-project')} <HeartIcon className="h-4 w-4 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" />
 								</Button>

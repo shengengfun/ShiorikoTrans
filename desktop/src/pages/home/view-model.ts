@@ -19,6 +19,7 @@ import { useAudioDownload } from './hooks/use-audio-download'
 import { useMediaSelection } from './hooks/use-media-selection'
 import { useTranscription } from './hooks/use-transcription'
 import { isTranscriptionModelFile, findModelFilesInDir } from '~/lib/model'
+import { isNonTranscribeSubdir } from '~/lib/model-paths'
 
 export interface BatchOptions {
 	files: NamedPath[]
@@ -147,6 +148,9 @@ export function viewModel() {
 			const entries = await ls(configPath)
 			const found: NamedPath[] = []
 			for (const entry of entries) {
+				if (entry.is_dir && isNonTranscribeSubdir(entry.name)) {
+					continue
+				}
 				if (entry.is_dir) {
 					const files = await findModelFilesInDir(entry.path)
 					for (const f of files) {

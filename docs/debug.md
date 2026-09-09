@@ -1,11 +1,11 @@
-# Troubleshoot audire crash / error
+# Troubleshoot shiorikotrans crash / error
 
 Try the following, the more you try the better the chance we'll find the cause :)
 
-1. Is the audio file valid? try with different one, eg. download [audire/samples/single.wav](https://github.com/audire/audire/raw/main/samples/single.wav)
+1. Is the audio file valid? try with different one, eg. download [shiorikotrans/samples/single.wav](https://github.com/shiorikotrans/shiorikotrans/raw/main/samples/single.wav)
 2. Do you have errors? report it with the 'report button'
 3. Do you experience crash without errors? try to run from the terminal with logs enabled:
-4. Do you use other model than the default one? Please use the default one that comes with Audire when checking.
+4. Do you use other model than the default one? Please use the default one that comes with ShiorikoTrans when checking.
 
 <details>
 <summary>Windows</summary>
@@ -14,10 +14,10 @@ a. Open `cmd.exe`
 b. Execute:
 
 ```console
-taskkill /IM audire.exe /F
+taskkill /IM shiorikotrans.exe /F
 set RUST_BACKTRACE=1
-set RUST_LOG=audire=debug,whisper_rs=debug
-%localappdata%\audire\audire.exe
+set RUST_LOG=shiorikotrans=debug,whisper_rs=debug
+%localappdata%\shiorikotrans\shiorikotrans.exe
 ```
 
 </details>
@@ -26,7 +26,7 @@ set RUST_LOG=audire=debug,whisper_rs=debug
 <summary>macOS</summary>
 
 ```console
-RUST_LOG=audire=debug,whisper_rs=debug RUST_BACKTRACE=1 /Applications/audire.app/Contents/MacOS/audire
+RUST_LOG=shiorikotrans=debug,whisper_rs=debug RUST_BACKTRACE=1 /Applications/shiorikotrans.app/Contents/MacOS/shiorikotrans
 ```
 
 </details>
@@ -44,11 +44,11 @@ Does it happens with original Whisper?
 
 1. Download one of the `zip` files from [releases/tag/v1.6.0](https://github.com/ggerganov/whisper.cpp/releases/tag/v1.6.0) (Scroll down and choose `whisper-bin-x64.zip` in `Windows`
 2. Extract them and open the folder, then open explorer in that folder and hit `Ctrl` + `l` in `explorer, type `cmd` and enter
-3. Download [audire/samples/single.wav](https://github.com/audire/audire/raw/main/samples/single.wav) and place it in the same folder (and check that the file is ok)
+3. Download [shiorikotrans/samples/single.wav](https://github.com/shiorikotrans/shiorikotrans/raw/main/samples/single.wav) and place it in the same folder (and check that the file is ok)
 4. Try to transcribe by execute
 
 ```console
-main.exe -m "%localappdata%\github.com.thewh1teagle.audire\ggml-medium.bin" -f "samples_single.wav"
+main.exe -m "%localappdata%\github.com.thewh1teagle.shiorikotrans\ggml-medium.bin" -f "samples_single.wav"
 ```
 
 </details>
@@ -64,11 +64,11 @@ In windows, open search menu and search for `Event Viewer`, choose `Windows Logs
 <summary>Find debug log file</summary>
 If you can't open the app due to crash, try to check any logs in
 
-macOS: `$HOME/Library/Application Support/github.com.thewh1teagle.audire`
+macOS: `$HOME/Library/Application Support/github.com.thewh1teagle.shiorikotrans`
 
-Windows: `%appdata%\github.com.thewh1teagle.audire`
+Windows: `%appdata%\github.com.thewh1teagle.shiorikotrans`
 
-Linux: `~/.config/github.com/thewh1teagle.audire`
+Linux: `~/.config/github.com/thewh1teagle.shiorikotrans`
 
 </details>
 
@@ -113,4 +113,4 @@ For `vulkan-1.dll` install [VulkanRT-Installer.exe](https://sdk.lunarg.com/sdk/d
 
 </details>
 
-After you finished, share you results by opening [new issue](https://github.com/audire/audire/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) or just comment in the issue.
+After you finished, share you results by opening [new issue](https://github.com/shiorikotrans/shiorikotrans/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) or just comment in the issue.

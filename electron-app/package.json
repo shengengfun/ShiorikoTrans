@@ -1,8 +1,8 @@
 {
-	"name": "audire-electron",
+	"name": "shiorikotrans-electron",
 	"private": true,
 	"version": "0.0.0",
-	"description": "Audire - Desktop voice transcription app (Electron + FunASR)",
+	"description": "ShiorikoTrans - Desktop voice transcription app (Electron + FunASR)",
 	"main": "dist-electron/main.js",
 	"type": "module",
 	"scripts": {

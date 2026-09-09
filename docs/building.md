@@ -181,7 +181,7 @@ winget install -e --id Microsoft.WindowsSDK.10.0.26100
 Generate a self-signed certificate (valid 10 years):
 
 ```console
-openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nodes -subj "/CN=Audire" -addext "extendedKeyUsage=codeSigning"
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 3650 -nodes -subj "/CN=ShiorikoTrans" -addext "extendedKeyUsage=codeSigning"
 openssl pkcs12 -export -out cert.pfx -inkey key.pem -in cert.pem -password pass:YOUR_PASSWORD
 base64 -i cert.pfx
 ```
@@ -199,7 +199,7 @@ rm key.pem cert.pem cert.pfx
 
 ## Analytics (Optional)
 
-Audire uses [Aptabase](https://aptabase.com/) for analytics. Not required for development. To enable, set these env vars at build time:
+ShiorikoTrans uses [Aptabase](https://aptabase.com/) for analytics. Not required for development. To enable, set these env vars at build time:
 
 ```console
 export APTABASE_APP_KEY="A-..."

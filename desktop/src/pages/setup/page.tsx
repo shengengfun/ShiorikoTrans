@@ -13,7 +13,7 @@ function App() {
 			<div className="app-panel w-full max-w-xl text-center">
 				<p className="app-kicker mb-2">{m.setup({ defaultValue: 'Setup' })}</p>
 				<div className="text-balance text-2xl font-semibold md:text-3xl">
-					{isDownloading ? m.downloadingModel() : 'Welcome to Audire'}
+					{isDownloading ? m.downloadingModel() : 'Welcome to ShiorikoTrans'}
 				</div>
 				<p className="mt-3 text-muted-foreground">
 					{isDownloading

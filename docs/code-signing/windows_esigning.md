@@ -111,8 +111,8 @@ monthly signing limit.
 
 ### What gets signed
 
-- `audire.exe` (main app)
-- `audire-*setup*.exe` (NSIS installer)
+- `shiorikotrans.exe` (main app)
+- `shiorikotrans-*setup*.exe` (NSIS installer)
 
 ### What gets skipped
 

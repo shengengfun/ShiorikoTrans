@@ -6,10 +6,10 @@ import { ErrorModalContext } from '~/providers/error-modal'
 import { usePreferenceProvider } from '~/providers/preference'
 import * as utils from '~/lib/model'
 import * as osExt from '@tauri-apps/plugin-os'
+import { resolveAuxModelPath } from '~/lib/model-paths'
 import * as config from '~/lib/config'
 import { ask } from '@tauri-apps/plugin-dialog'
 import * as fs from '@tauri-apps/plugin-fs'
-import { join } from '@tauri-apps/api/path'
 
 export function viewModel() {
 	const location = useLocation()
@@ -45,7 +45,7 @@ export function viewModel() {
 	async function ensureRequiredVad(metadata: utils.ModelMetadata | null) {
 		if (!metadata?.capabilities.requires_vad) return true
 		const modelsFolder = await invoke<string>('get_models_folder')
-		const vadPath = await join(modelsFolder, config.vadModelFilename)
+		const vadPath = await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename)
 		if (await fs.exists(vadPath)) return true
 
 		const confirmed = await ask('Nemotron requires the Silero VAD model. Download it before selecting Nemotron?', {

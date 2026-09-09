@@ -1,8 +1,8 @@
 {
 	"$schema": "./gen/schemas/desktop-schema.json",
-	"productName": "Audire",
+	"productName": "ShiorikoTrans",
 	"version": "1.0.1",
-	"identifier": "com.audire.app",
+	"identifier": "com.shiorikotrans.app",
 	"app": {
 		"macOSPrivateApi": true,
 		"windows": [],
@@ -53,7 +53,7 @@
 			"mobile": [],
 			"desktop": {
 				"schemes": [
-				"audire"
+				"shiorikotrans"
 			]
 			}
 		}

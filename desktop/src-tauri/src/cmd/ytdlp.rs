@@ -1,4 +1,4 @@
-use crate::ffmpeg::get_audire_temp_folder;
+use crate::ffmpeg::get_shiorikotrans_temp_folder;
 use eyre::{bail, Context, ContextCompat, Result};
 use serde_json::Value;
 use std::{
@@ -39,7 +39,7 @@ fn get_binary_name() -> &'static str {
 
 #[tauri::command]
 pub async fn get_latest_ytdlp_version() -> Result<String> {
-    let client = reqwest::Client::builder().user_agent("audire-app").build()?;
+    let client = reqwest::Client::builder().user_agent("shiorikotrans-app").build()?;
     let resp = client
         .get("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
         .send()
@@ -62,13 +62,13 @@ pub fn get_temp_path(app_handle: AppHandle, ext: String, in_documents: Option<bo
             app_handle
                 .path()
                 .document_dir()
-                .unwrap_or(get_audire_temp_folder())
+                .unwrap_or(get_shiorikotrans_temp_folder())
                 .join(crate::config::DOCUMENTS_SUBFOLDER)
         };
         std::fs::create_dir_all(&dir).ok();
         dir
     } else {
-        get_audire_temp_folder()
+        get_shiorikotrans_temp_folder()
     };
 
     base_path.push(format!("{}.{}", crate::ffmpeg::get_local_time(), ext));

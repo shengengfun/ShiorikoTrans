@@ -51,10 +51,10 @@ pub fn resolve_sona_binary(app_handle: &tauri::AppHandle) -> Result<PathBuf> {
     #[cfg(target_os = "linux")]
     {
         let linux_paths = [
-            PathBuf::from("/usr/lib/audire").join(binary_name),
-            PathBuf::from("/usr/lib/audire/binaries").join(binary_name),
-            PathBuf::from("/opt/audire").join(binary_name),
-            PathBuf::from("/opt/audire/binaries").join(binary_name),
+            PathBuf::from("/usr/lib/shiorikotrans").join(binary_name),
+            PathBuf::from("/usr/lib/shiorikotrans/binaries").join(binary_name),
+            PathBuf::from("/opt/shiorikotrans").join(binary_name),
+            PathBuf::from("/opt/shiorikotrans/binaries").join(binary_name),
         ];
         for path in &linux_paths {
             candidates.push(path.clone());

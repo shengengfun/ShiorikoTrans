@@ -7,7 +7,9 @@ import { m } from '~/paraglide/messages.js'
 import { toast } from 'sonner'
 import successSound from '~/assets/success.mp3'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
+import { resolveAuxModelPath } from '~/lib/model-paths'
 import * as config from '~/lib/config'
+import { setActivity } from '~/lib/activity'
 import { startKeepAwake, stopKeepAwake } from '~/lib/keep-awake'
 import { isUserError } from '~/lib/sona-errors'
 import * as transcript from '~/lib/transcript'
@@ -32,6 +34,15 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 	const [progress, setProgress] = useState<number | null>(0)
 
 	useEffect(() => { preferenceRef.current = preference }, [preference])
+
+	// Publish global activity for the bottom status bar
+	useEffect(() => {
+		if (loading) setActivity({ phase: 'transcribing', progress: progress ?? 0 })
+	}, [loading, progress])
+
+	useEffect(() => {
+		if (!loading) setActivity({ phase: 'idle' })
+	}, [loading])
 
 	async function onAbort() {
 		setIsAborting(true)
@@ -83,8 +94,8 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 
 			const requiresVad = current.modelMetadata?.capabilities.requires_vad ?? false
 			const modelsFolder = current.diarizeEnabled || current.stableTimestampsEnabled || requiresVad ? await invoke<string>('get_models_folder') : null
-			const diarizeModel = current.diarizeEnabled ? `${modelsFolder}/${config.diarizeModelFilename}` : undefined
-			const vadModel = current.stableTimestampsEnabled || requiresVad ? `${modelsFolder}/${config.vadModelFilename}` : undefined
+			const diarizeModel = current.diarizeEnabled && modelsFolder ? await resolveAuxModelPath(modelsFolder, 'diarize', config.diarizeModelFilename) : undefined
+			const vadModel = (current.stableTimestampsEnabled || requiresVad) && modelsFolder ? await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename) : undefined
 
 			const baseOptions = {
 				path,
@@ -117,6 +128,7 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 			console.info(`Transcribe took ${total} seconds.`)
 			toast.success(m.transcribeTook({ total: String(total) }), { position: 'bottom-center' })
 			trackAnalyticsEvent(analyticsEvents.TRANSCRIBE_SUCCEEDED, { source: 'home', duration_seconds: total, segments_count: completedSegments.length })
+			preferenceRef.current.addRecentFile(path.split(/[\\/]/).pop() || path, path)
 		} catch (error) {
 			if (!abortRef.current) {
 				stopKeepAwake()

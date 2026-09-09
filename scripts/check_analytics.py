@@ -8,7 +8,7 @@
 # ///
 
 """
-Analyze Aptabase analytics export for Audire desktop app.
+Analyze Aptabase analytics export for ShiorikoTrans desktop app.
 
 Events tracked in the app:
 

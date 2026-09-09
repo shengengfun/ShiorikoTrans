@@ -21,13 +21,13 @@ export function useSingleInstance({ setFiles }: UseSingleInstanceProps) {
 			const argv = event.payload
 			let action = argv?.[1]
 
-			// audire://download/?url=google.com
+			// shiorikotrans://download/?url=google.com
 			// already handled in deep links in macos
-			if (action && action.startsWith('audire://download/?') && platform != 'macos') {
-				const params = new URLSearchParams(action.replace('audire://download/?', ''))
+			if (action && action.startsWith('shiorikotrans://download/?') && platform != 'macos') {
+				const params = new URLSearchParams(action.replace('shiorikotrans://download/?', ''))
 				const url = params.get('url')
 				if (url) {
-					const downloadURL = url.replace('audire://download/?url=', '')
+					const downloadURL = url.replace('shiorikotrans://download/?url=', '')
 					const hostname = new URL(url).hostname
 					const confirm = await ask(`${m.askForDownloadModel()} ${hostname}?`, { title: m.downloadModel(), kind: 'info' })
 					if (confirm) {

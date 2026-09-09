@@ -44,3 +44,7 @@ aptabase-python/
 tauri-plugin-aptabase/
 **/project.inlang/cache/
 **/project.inlang/project_id
+
+# Large local sample media / packaged binaries (not for version control)
+videoplayback_Mux.mp4
+electron-app/electron.zip

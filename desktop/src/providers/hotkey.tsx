@@ -10,6 +10,7 @@ import * as transcript from '~/lib/transcript'
 import { usePreferenceProvider } from '~/providers/preference'
 import { m } from '~/paraglide/messages.js'
 import { hideDictationIndicator, showDictationIndicator } from '~/lib/dictation-indicator'
+import { resolveAuxModelPath } from '~/lib/model-paths'
 import * as config from '~/lib/config'
 
 // Module-level flag used by home viewModel to skip processing
@@ -184,14 +185,14 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
 				unloadTimeoutMinutes: preferenceRef.current.unloadTimeoutMinutes,
 			})
 			if (loadResult === 'gpu_fallback') {
-				await notify('audire', m.gpuFallbackToCpu())
+				await notify('shiorikotrans', m.gpuFallbackToCpu())
 			}
 				const requiresVad = preferenceRef.current.modelMetadata?.capabilities.requires_vad ?? false
 				const modelsFolder = requiresVad ? await invoke<string>('get_models_folder') : null
 				const options = {
 					path,
 					...preferenceRef.current.modelOptions,
-					...(requiresVad ? { vad_model: `${modelsFolder}/${config.vadModelFilename}` } : {}),
+					...(requiresVad && modelsFolder ? { vad_model: await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename) } : {}),
 				}
 				const res: transcript.Transcript = await invoke('transcribe', { options })
 				let resultText = transcript.asText(res.segments, m.speakerPrefix())
@@ -213,14 +214,14 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
 					await invoke('type_text', { text: resultText })
 				} else {
 					await clipboard.writeText(resultText)
-					await notify('audire', m.hotkeyTranscriptionCopied())
+					await notify('shiorikotrans', m.hotkeyTranscriptionCopied())
 				}
 				finishIndicator('completed', { output: hotkeyOutputModeRef.current })
 			} catch (error) {
 				console.error('Hotkey transcription error:', error)
 				const message = getErrorMessage(error)
 				finishIndicator('error', { message })
-				await notify('audire', message)
+				await notify('shiorikotrans', message)
 			} finally {
 				isStoppingRef.current = false
 				isHotkeyRecordingRef.current = false

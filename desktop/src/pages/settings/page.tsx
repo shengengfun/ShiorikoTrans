@@ -5,6 +5,7 @@ import {
 	Cpu,
 	Globe,
 	Mic,
+	Palette,
 	ShieldCheck,
 	SlidersHorizontal,
 	Sparkles,
@@ -17,6 +18,7 @@ import { viewModel } from './view-model'
 import { Button } from '~/components/ui/button'
 import { AdvancedSection } from './sections/advanced'
 import { ApiSection } from './sections/api'
+import { AppearanceSection } from './sections/appearance'
 import { DictationSection } from './sections/dictation'
 import { GeneralSection } from './sections/general'
 import { GpuSection } from './sections/gpu'
@@ -31,7 +33,7 @@ interface SettingsPageProps {
 	scrollTo?: string
 }
 
-type SectionId = 'general' | 'transcription' | 'models' | 'summarize' | 'tuning' | 'dictation' | 'api' | 'privacy' | 'advanced' | 'gpu'
+type SectionId = 'general' | 'appearance' | 'transcription' | 'models' | 'summarize' | 'tuning' | 'dictation' | 'api' | 'privacy' | 'advanced' | 'gpu'
 
 interface SettingsSection {
 	id: SectionId
@@ -72,6 +74,7 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 		{
 			label: m.customize(),
 			sections: [
+				{ id: 'appearance', label: 'Appearance', icon: <Palette className="h-4 w-4" /> },
 				{ id: 'dictation', label: m.globalDictation(), icon: <Mic className="h-4 w-4" /> },
 				{ id: 'summarize', label: m.processWithLlm(), icon: <Sparkles className="h-4 w-4" /> },
 			],
@@ -136,6 +139,8 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 						<h2 className="text-xl font-semibold">{sections.find((s) => s.id === activeSection)?.label}</h2>
 					</div>
 					{activeSection === 'general' && <GeneralSection vm={vm} />}
+
+					{activeSection === 'appearance' && <AppearanceSection vm={vm} />}
 
 					{activeSection === 'transcription' && <TranscriptionSection vm={vm} />}
 

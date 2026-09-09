@@ -11,7 +11,9 @@ import { validPath } from '~/lib/media'
 import { startKeepAwake, stopKeepAwake } from '~/lib/keep-awake'
 import * as webview from '@tauri-apps/api/webviewWindow'
 import * as dialog from '@tauri-apps/plugin-dialog'
+import { resolveAuxModelPath } from '~/lib/model-paths'
 import * as config from '~/lib/config'
+import { setActivity } from '~/lib/activity'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
 import successSound from '~/assets/success.mp3'
 import * as fs from '@tauri-apps/plugin-fs'
@@ -178,12 +180,12 @@ export function viewModel() {
 		let diarize_model: string | undefined
 		if (preference.diarizeEnabled) {
 			const modelsFolder = await invoke<string>('get_models_folder')
-			diarize_model = modelsFolder + '/' + config.diarizeModelFilename
+			diarize_model = await resolveAuxModelPath(modelsFolder, 'diarize', config.diarizeModelFilename)
 		}
 		let vad_model: string | undefined
 		if (preference.stableTimestampsEnabled || preference.modelMetadata?.capabilities.requires_vad) {
 			const modelsFolder = await invoke<string>('get_models_folder')
-			vad_model = modelsFolder + '/' + config.vadModelFilename
+			vad_model = await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename)
 		}
 		setCurrentIndex(localIndex)
 		const loopStartTime = performance.now()
@@ -339,6 +341,11 @@ export function viewModel() {
 		handleDrop()
 		ListenForProgress()
 	}, [])
+
+	// Publish global activity for the bottom status bar
+	useEffect(() => {
+		setActivity(inProgress ? { phase: 'transcribing', progress: progress ?? 0 } : { phase: 'idle' })
+	}, [inProgress, progress])
 
 	async function cancel() {
 		if (isAbortingRef.current) {

@@ -43,7 +43,7 @@ That's it! Summarization will now be active in Ollama.
 
 ## Stable Timestamps (Subtitles / Movies)
 
-Audire includes a stable timestamp mode for tighter subtitle timing on long-form content.
+ShiorikoTrans includes a stable timestamp mode for tighter subtitle timing on long-form content.
 
 1. Open `More Options`.
 2. Enable `Stable timestamps`.
@@ -60,25 +60,25 @@ Notes:
 
 Translation to English works only with Whisper `small`, `medium`, and `large` models. It does not work with Whisper `large-v3-turbo`.
 
-If you need translation, download a supported model from the [models docs](/audire/docs#models).
+If you need translation, download a supported model from the [models docs](/shiorikotrans/docs#models).
 
 ## Manual Install 🛠️
 
-`MacOS Apple silicon`: install `aarch64.dmg` file from [releases](https://github.com/audire/audire/releases) **Don't forget to right click and open from Applications once**
+`MacOS Apple silicon`: install `aarch64.dmg` file from [releases](https://github.com/shiorikotrans/shiorikotrans/releases) **Don't forget to right click and open from Applications once**
 
-`MacOS Intel`: install `x64.dmg` file from [releases](https://github.com/audire/audire/releases) **Don't forget to right click and open from Applications once**
+`MacOS Intel`: install `x64.dmg` file from [releases](https://github.com/shiorikotrans/shiorikotrans/releases) **Don't forget to right click and open from Applications once**
 
-`Windows`: install `.exe` file from [releases](https://github.com/audire/audire/releases)
+`Windows`: install `.exe` file from [releases](https://github.com/shiorikotrans/shiorikotrans/releases)
 
-`Linux`: install `.deb` from [releases](https://github.com/audire/audire/releases) (`Arch` users can use [debtap](https://aur.archlinux.org/packages/debtap))
+`Linux`: install `.deb` from [releases](https://github.com/shiorikotrans/shiorikotrans/releases) (`Arch` users can use [debtap](https://aur.archlinux.org/packages/debtap))
 
-_All models available for manual install. see [Pre built models](https://github.com/audire/audire/releases/tag/v0.0.1)_
+_All models available for manual install. see [Pre built models](https://github.com/shiorikotrans/shiorikotrans/releases/tag/v0.0.1)_
 
 ## Offline Setup 💾
 
-Offline installation with Audire is easy: open the app, cancel the download, and navigate to the `Customize` section within settings.
+Offline installation with ShiorikoTrans is easy: open the app, cancel the download, and navigate to the `Customize` section within settings.
 
-_All models available for manual install. see settings or [Pre built models](https://github.com/audire/audire/releases/tag/v0.0.1)_
+_All models available for manual install. see settings or [Pre built models](https://github.com/shiorikotrans/shiorikotrans/releases/tag/v0.0.1)_
 
 ## Faster transcriptions on macOS (2-3x) 🌟
 
@@ -86,7 +86,7 @@ _All models available for manual install. see settings or [Pre built models](htt
 
 - e.g. `ggml-medium-encoder.mlmodelc.zip` matches `ggml-medium-encoder.bin`
 
-2. Open models path from Audire settings
+2. Open models path from ShiorikoTrans settings
 3. Drag and drop the `.mlcmodel.c` file into the models folder so that it is alongside the `.bin` file
 4. Transcribe a file, the first time you use the model it will take longer as it is compiling the model. Every subsequent time it will be faster.
 
@@ -94,26 +94,26 @@ _All models available for manual install. see settings or [Pre built models](htt
 
 Download and install [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe)
 
-## Special link to download models in audire
+## Special link to download models in shiorikotrans
 
-You can add links to your websites for letting users download your models easily from your website directly to audire.
+You can add links to your websites for letting users download your models easily from your website directly to shiorikotrans.
 
 The URL should be like
 
 ```
-audire://download/?url=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin?download=true
+shiorikotrans://download/?url=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin?download=true
 ```
 
 ## Usage on linux server
 
-To use Audire on linux server you need to install fake display
+To use ShiorikoTrans on linux server you need to install fake display
 
 ```console
 sudo apt-get install xvfb -y
 Xvfb :1 -screen 0 1024x768x24 &
 export DISPLAY=1
 
-wget https://github.com/audire/audire/releases/download/v0.0.1/ggml-medium.bin
-wget https://github.com/audire/audire/raw/main/samples/single.wav
-audire --model ggml-medium.bin --file single.wav
+wget https://github.com/shiorikotrans/shiorikotrans/releases/download/v0.0.1/ggml-medium.bin
+wget https://github.com/shiorikotrans/shiorikotrans/raw/main/samples/single.wav
+shiorikotrans --model ggml-medium.bin --file single.wav
 ```

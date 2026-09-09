@@ -42,6 +42,27 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
 
     let store = app.store(STORE_FILENAME)?;
 
+    // Organize models into purpose sub-folders: transcribe / translate / vad /
+    // diarize. Legacy models that live directly in the models folder keep working
+    // (the frontend resolves them first — see resolve_aux_model_path).
+    {
+        let models_folder = store
+            .get("models_folder")
+            .and_then(|p| p.as_str().map(std::path::PathBuf::from))
+            .or_else(|| {
+                std::env::current_exe()
+                    .ok()
+                    .and_then(|exe| exe.parent().map(|dir| dir.to_path_buf()))
+                    .and_then(|dir| ["models", "model"].iter().map(|f| dir.join(f)).find(|c| c.is_dir()))
+            })
+            .unwrap_or_else(|| local_app_data_dir.clone());
+        for sub in ["transcribe", "translate", "vad", "diarize"] {
+            if let Err(error) = std::fs::create_dir_all(models_folder.join(sub)) {
+                tracing::warn!("failed to create models sub-folder {}: {:?}", sub, error);
+            }
+        }
+    }
+
     // Setup logging to terminal
     {
         let mut app_handle = STATIC_APP.lock().expect("lock");
@@ -51,7 +72,7 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     crate::cleaner::clean_old_logs(app.handle()).log_error();
     crate::cleaner::clean_old_files().log_error();
     crate::cleaner::clean_updater_files().log_error();
-    tracing::debug!("audire App Running");
+    tracing::debug!("shiorikotrans App Running");
 
     // Crash handler
 
@@ -77,7 +98,7 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
                     .dialog()
                     .message("App crashed with error. Please register to Github and then click report.")
                     .kind(tauri_plugin_dialog::MessageDialogKind::Error)
-                    .title("audire Crashed")
+                    .title("shiorikotrans Crashed")
                     .buttons(MessageDialogButtons::OkCustom("Report".into()))
                     .show(|_| {});
                 let _ = tauri_plugin_opener::open_url(get_issue_url(format!("{:?}", info)), None::<&str>);
@@ -115,16 +136,22 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     } else {
         tracing::debug!("Non CLI mode");
         // Create main window
-        let result = tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
-            .inner_size(800.0, 700.0)
-            .min_inner_size(800.0, 700.0)
+        let mut window_builder = tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::App("index.html".into()))
+            .inner_size(1160.0, 740.0)
+            .min_inner_size(900.0, 620.0)
             .center()
-            .title("audire")
+            .title("ShiorikoTrans")
             .resizable(true)
             .focused(true)
             .shadow(true)
-            .visible(true)
-            .build();
+            .visible(true);
+        // Frameless window on Windows: the app draws its own title bar (drag
+        // region + custom window controls) so the logo/icon can live in it.
+        #[cfg(target_os = "windows")]
+        {
+            window_builder = window_builder.decorations(false);
+        }
+        let result = window_builder.build();
         if let Err(error) = result {
             tracing::error!("{:?}", error);
         }

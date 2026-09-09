@@ -25,7 +25,7 @@ export async function resetApp() {
 }
 
 export async function getIssueUrl(logs: string) {
-	return `https://github.com/audire/audire/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=App+reports+bug+&logs=${encodeURIComponent(
+	return `https://github.com/shiorikotrans/shiorikotrans/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=App+reports+bug+&logs=${encodeURIComponent(
 		logs,
 	)}`
 }

@@ -5,14 +5,14 @@ import { migrateLegacyLocale } from './migrate-legacy-locale'
  *
  * Give each migration the next sequential version and append it to the list.
  * Never reuse, reorder, or remove released migrations: users may upgrade from
- * any older audire release and must execute every missing migration in order.
+ * any older shiorikotrans release and must execute every missing migration in order.
  *
  * If a released migration needs a follow-up fix, append another migration.
  * The stored version advances only after a migration succeeds, so keep each
  * migration idempotent to make retries safe.
  */
 const migrations = [{ version: 1, run: migrateLegacyLocale }]
-const MIGRATION_VERSION_KEY = 'audire:migration-version'
+const MIGRATION_VERSION_KEY = 'shiorikotrans:migration-version'
 
 function readMigrationVersion() {
 	const version = Number(localStorage.getItem(MIGRATION_VERSION_KEY) ?? 0)

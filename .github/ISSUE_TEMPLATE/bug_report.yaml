@@ -9,12 +9,12 @@ body:
       attributes:
           value: |
               Thanks for taking the time to fill out this bug report!
-              One second before you create, search if it's already reported [issues](https://github.com/audire/audire/issues?q=is:issue+label:bug+)
+              One second before you create, search if it's already reported [issues](https://github.com/shiorikotrans/shiorikotrans/issues?q=is:issue+label:bug+)
 
-              Please, if possible, just open settings in audire, and click 'Report Bug'
+              Please, if possible, just open settings in shiorikotrans, and click 'Report Bug'
               This way I'll get all the relevant info required
 
-              If not reported, if possible please check [Debug.md](https://github.com/audire/audire/blob/main/docs/debug.md) and add comments with more info.
+              If not reported, if possible please check [Debug.md](https://github.com/shiorikotrans/shiorikotrans/blob/main/docs/debug.md) and add comments with more info.
 
     - type: textarea
       id: what-happened

@@ -171,7 +171,7 @@ mod tests {
 
     fn test_dir(name: &str) -> PathBuf {
         let unique = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos();
-        std::env::temp_dir().join(format!("audire-download-{name}-{}-{unique}", std::process::id()))
+        std::env::temp_dir().join(format!("shiorikotrans-download-{name}-{}-{unique}", std::process::id()))
     }
 
     #[test]

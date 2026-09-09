@@ -151,11 +151,11 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
 					await invoke('type_text', { text: resultText })
 				} else {
 					await clipboard.writeText(resultText)
-					await notify('Audire', t('common.hotkey-transcription-copied'))
+					await notify('ShiorikoTrans', t('common.hotkey-transcription-copied'))
 				}
 			} catch (error) {
 				console.error('Hotkey transcription error:', error)
-				await notify('Audire', String(error))
+				await notify('ShiorikoTrans', String(error))
 			} finally {
 				isHotkeyRecordingRef.current = false
 				hotkeyRecordingActive = false

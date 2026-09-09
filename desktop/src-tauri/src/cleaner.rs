@@ -1,5 +1,5 @@
 use crate::error::LogError;
-use crate::ffmpeg::get_audire_temp_folder;
+use crate::ffmpeg::get_shiorikotrans_temp_folder;
 use crate::{cmd::app::get_logs_folder, config, logging::get_log_path};
 use eyre::{eyre, ContextCompat, Result};
 
@@ -34,13 +34,13 @@ pub fn clean_old_logs(app: &tauri::AppHandle) -> Result<()> {
 }
 
 pub fn clean_old_files() -> Result<()> {
-    let current_temp_dir = get_audire_temp_folder();
+    let current_temp_dir = get_shiorikotrans_temp_folder();
     let temp_dir = std::env::temp_dir();
     let temp_dir = temp_dir.to_str().unwrap_or_default();
     // Remove suffix
     let temp_dir = temp_dir.strip_suffix('/').unwrap_or(temp_dir);
     let temp_dir = temp_dir.strip_suffix('\\').unwrap_or(temp_dir);
-    let pattern = format!("{}/audire_temp*", temp_dir);
+    let pattern = format!("{}/shiorikotrans_temp*", temp_dir);
     tracing::debug!("searching old files in {}", pattern);
     for path in glob::glob(&pattern)? {
         let path = path?;
@@ -57,13 +57,13 @@ pub fn clean_old_files() -> Result<()> {
 }
 
 pub fn clean_updater_files() -> Result<()> {
-    let current_temp_dir = get_audire_temp_folder();
+    let current_temp_dir = get_shiorikotrans_temp_folder();
     let temp_dir = std::env::temp_dir();
     let temp_dir = temp_dir.to_str().unwrap_or_default();
     // Remove suffix
     let temp_dir = temp_dir.strip_suffix('/').unwrap_or(temp_dir);
     let temp_dir = temp_dir.strip_suffix('\\').unwrap_or(temp_dir);
-    let pattern = format!("{}/audire*-updater*", temp_dir);
+    let pattern = format!("{}/shiorikotrans*-updater*", temp_dir);
     tracing::debug!("searching old files in {}", pattern);
     for path in glob::glob(&pattern)? {
         let path = path?;

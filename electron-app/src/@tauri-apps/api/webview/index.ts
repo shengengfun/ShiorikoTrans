@@ -1,5 +1,5 @@
 // Compatibility shim: @tauri-apps/api/webview
-// Webview API shim for audire's drop-modal
+// Webview API shim for shiorikotrans's drop-modal
 
 export function getCurrentWebview() {
 	return {

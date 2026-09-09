@@ -1,14 +1,14 @@
 <p align="center">
-  <a target="blank" href="https://github.com/audire/audire">
+  <a target="blank" href="https://github.com/shiorikotrans/shiorikotrans">
     <img
         width="96px"
-        alt="Audire logo"
+        alt="ShiorikoTrans logo"
         src="./design/logo.png"
     />
   </a>
 </p>
 
-<h1 align="center">Audire - Transcribe on your own!</h1>
+<h1 align="center">ShiorikoTrans - Transcribe on your own!</h1>
 
 <p align="center">
   <strong>⌨️ Transcribe audio and video right on your device</strong>
@@ -16,11 +16,11 @@
 </p>
 
 <p align="center">
-  <a target="_blank" href="https://audire.github.io/audire/">
-    🔗 Download Audire
+  <a target="_blank" href="https://shiorikotrans.github.io/shiorikotrans/">
+    🔗 Download ShiorikoTrans
   </a>
     &nbsp; | &nbsp; Give it a Star ⭐ | &nbsp;
-    <a target="_blank" href="https://audire.github.io/audire/?action=support-audire">Support the project 🤝</a>
+    <a target="_blank" href="https://shiorikotrans.github.io/shiorikotrans/?action=support-shiorikotrans">Support the project 🤝</a>
 </p>
 
 <hr />
@@ -28,8 +28,8 @@
 ## Screenshots
 
 <p align="center">
-	<a target="_blank" href="https://audire.github.io/audire/">
-    	<img width=600 src="https://github.com/audire/audire/assets/61390950/22779ac6-9e49-4c21-b528-29647f039da2">
+	<a target="_blank" href="https://shiorikotrans.github.io/shiorikotrans/">
+    	<img width=600 src="https://github.com/shiorikotrans/shiorikotrans/assets/61390950/22779ac6-9e49-4c21-b528-29647f039da2">
 	</a>
 </p>
 
@@ -55,11 +55,11 @@
 - ⚙️ Model arguments for advanced users
 - ⏳ Transcribe system audio
 - 🎤 Transcribe from microphone
-- 🖥️ CLI support: Use Audire directly from the command line interface! (see `--help`)
+- 🖥️ CLI support: Use ShiorikoTrans directly from the command line interface! (see `--help`)
 - 👥 Speaker diarization
 - 🎬 Stable timestamps mode for subtitle/movie-grade timing (VAD-backed, slower)
 - 📱 ~iOS & Android support~ (coming soon)
-- 📥 Integrate custom models from your own site: Use `audire://download/?url=<model url>`
+- 📥 Integrate custom models from your own site: Use `shiorikotrans://download/?url=<model url>`
 - 📹 Choose caption length optimized for videos / reels
 - ⚡ HTTP API with Swagger docs and agent skills
 
@@ -80,8 +80,8 @@ In addition, you're welcome to add translations.
 
 We would like to express our sincere gratitude to all the contributors.
 
-<a href="https://github.com/audire/audire/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=audire/audire" />
+<a href="https://github.com/shiorikotrans/shiorikotrans/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=shiorikotrans/shiorikotrans" />
 </a>
 
 # Community
@@ -90,7 +90,7 @@ We would like to express our sincere gratitude to all the contributors.
 
 # Roadmap 🛣️
 
-You can see the roadmap in [Audire-Roadmap](https://github.com/users/thewh1teagle/projects/5/views/1)
+You can see the roadmap in [ShiorikoTrans-Roadmap](https://github.com/users/thewh1teagle/projects/5/views/1)
 
 # Add translation 🌐
 
@@ -98,19 +98,19 @@ See the [translation guide](docs/translations.md).
 
 # Docs 📄
 
-see [Audire Docs](https://github.com/audire/audire/tree/main/docs)
+see [ShiorikoTrans Docs](https://github.com/shiorikotrans/shiorikotrans/tree/main/docs)
 
 # I want to know more!
 
-Medium [post](https://medium.com/@thewh1teagle/creating-audire-multilingual-audio-transcription-872ab6d9dbb0)
+Medium [post](https://medium.com/@thewh1teagle/creating-shiorikotrans-multilingual-audio-transcription-872ab6d9dbb0)
 
 # Issue report
 
-You can open [new issue](https://github.com/audire/audire/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) and it's recommend to check [debug.md](docs/debug.md) first.
+You can open [new issue](https://github.com/shiorikotrans/shiorikotrans/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) and it's recommend to check [debug.md](docs/debug.md) first.
 
 # Privacy Policy 🔒
 
-Your privacy is important to us. Please review our [Privacy Policy](http://audire.github.io/audire/?action=open-privacy-policy) to understand how we handle your data.
+Your privacy is important to us. Please review our [Privacy Policy](http://shiorikotrans.github.io/shiorikotrans/?action=open-privacy-policy) to understand how we handle your data.
 
 # Credits
 

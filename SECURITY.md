@@ -2,7 +2,7 @@
 
 ## Reporting Security Issues
 
-If you find a security issue in Audire, please report it responsibly.  
+If you find a security issue in ShiorikoTrans, please report it responsibly.  
 We take security reports seriously and will do my best to review and address valid issues.
 
 The preferred way to report a vulnerability is via GitHub’s **Security Advisory – “Report a Vulnerability”** feature.
@@ -10,17 +10,17 @@ The preferred way to report a vulnerability is via GitHub’s **Security Advisor
 - Please do NOT open a public GitHub issue for security-related reports.
 - Include as much detail as possible so I can understand and reproduce the issue.
 
-If you can’t use GitHub Security Advisories, you can also reach out to me directly via **Audire’s Discord channel** (linked on the Audire website) and send me a DM.  
+If you can’t use GitHub Security Advisories, you can also reach out to me directly via **ShiorikoTrans’s Discord channel** (linked on the ShiorikoTrans website) and send me a DM.  
 Please use this channel only for security-related matters.
 
 After the initial report, I’ll reply with next steps and may ask for more details if needed.
 
 ## Supported Versions
 
-Security fixes are provided only for the latest released version of Audire.
+Security fixes are provided only for the latest released version of ShiorikoTrans.
 
 ## Third-Party Dependencies
 
 If the issue is in a third-party dependency, it’s usually best to report it directly to the maintainers of that project as well.
 
-Thanks for helping keep Audire secure.
+Thanks for helping keep ShiorikoTrans secure.

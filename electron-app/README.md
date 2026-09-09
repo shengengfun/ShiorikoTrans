@@ -1,6 +1,6 @@
-# Audire Electron - Desktop Voice Transcription App
+# ShiorikoTrans Electron - Desktop Voice Transcription App
 
-基于 [audire](https://github.com/audire/audire) 的 Electron 移植版本，后端使用 FunASR 替代 Whisper。
+基于 [shiorikotrans](https://github.com/shiorikotrans/shiorikotrans) 的 Electron 移植版本，后端使用 FunASR 替代 Whisper。
 
 ## 技术栈
 
@@ -64,7 +64,7 @@ electron-app/
 ├── electron/           # Electron 主进程
 │   ├── main.ts         # 主进程入口
 │   └── preload.ts      # 预加载脚本
-├── src/                # 前端代码 (来自 audire desktop/src)
+├── src/                # 前端代码 (来自 shiorikotrans desktop/src)
 │   ├── @tauri-apps/    # Tauri API 兼容层 (适配到 Electron)
 │   ├── components/     # UI 组件
 │   ├── lib/            # 工具库 (含 electron-adapter.ts)
@@ -108,6 +108,6 @@ FunASR 后端运行在 `http://127.0.0.1:8000`:
 
 ## 许可证
 
-MIT License - 保留原始 audire 项目的 MIT 许可证。
+MIT License - 保留原始 shiorikotrans 项目的 MIT 许可证。
 
-原始项目: https://github.com/audire/audire
+原始项目: https://github.com/shiorikotrans/shiorikotrans

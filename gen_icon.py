@@ -27,7 +27,7 @@ def create_icon(size, output_path):
     
     img.save(output_path)
 
-icon_dir = r'd:\Project\Audire 1.01\desktop\src-tauri\icons'
+icon_dir = r'd:\Project\ShiorikoTrans\desktop\src-tauri\icons'
 os.makedirs(icon_dir, exist_ok=True)
 
 sizes = [32, 64, 128, 256, 512]

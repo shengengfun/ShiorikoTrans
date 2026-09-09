@@ -7,11 +7,11 @@ import { InfoTooltip } from './info-tooltip'
 import { ModelOptions as IModelOptions, usePreferenceProvider } from '~/providers/preference'
 import { useToastProvider } from '~/providers/toast'
 import { listen } from '@tauri-apps/api/event'
+import { resolveAuxModelPath } from '~/lib/model-paths'
 import * as config from '~/lib/config'
 import * as fs from '@tauri-apps/plugin-fs'
 import { invoke } from '@tauri-apps/api/core'
 import { openUrl as shellOpen } from '@tauri-apps/plugin-opener'
-import { join } from '@tauri-apps/api/path'
 import { toast as hotToast } from 'sonner'
 import * as dialog from '@tauri-apps/plugin-dialog'
 import { Claude, defaultClaudeConfig, defaultOllamaConfig, defaultOpenAIConfig, Llm, Ollama, OpenAICompatible } from '~/lib/llm'
@@ -110,7 +110,7 @@ export default function ModelOptions({ options, setOptions }: ParamsProps) {
 		}
 		try {
 			const modelsFolder = await invoke<string>('get_models_folder')
-			const modelPath = await join(modelsFolder, config.vadModelFilename)
+			const modelPath = await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename)
 			const exists = await fs.exists(modelPath)
 			if (exists) {
 				preference.setStableTimestampsEnabled(true)
@@ -370,7 +370,7 @@ export default function ModelOptions({ options, setOptions }: ParamsProps) {
 										}
 										try {
 											const modelsFolder = await invoke<string>('get_models_folder')
-											const modelPath = await join(modelsFolder, config.diarizeModelFilename)
+											const modelPath = await resolveAuxModelPath(modelsFolder, 'diarize', config.diarizeModelFilename)
 											const exists = await fs.exists(modelPath)
 											if (exists) {
 												preference.setDiarizeEnabled(true)
