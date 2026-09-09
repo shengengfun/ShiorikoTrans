@@ -7,7 +7,10 @@ import { Bot, History, ListVideo, Minus, Settings2, Square, X } from 'lucide-rea
 import { m } from '~/paraglide/messages.js'
 import { usePreferenceProvider, type RecentFile } from '~/providers/preference'
 import { useFilesContext } from '~/providers/files-provider'
-import { getFriendlyModelName } from '~/lib/model'
+import { getFriendlyModelName, isTranscriptionModelFile, findModelFilesInDir } from '~/lib/model'
+import { isNonTranscribeSubdir } from '~/lib/model-paths'
+import { ls } from '~/lib/fs'
+import { invoke } from '@tauri-apps/api/core'
 import { cn } from '~/lib/style'
 import { Button } from './ui/button'
 import {
@@ -81,8 +84,36 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 		window.setTimeout(() => setFiles([{ name: recent.name, path: recent.path }]), 120)
 	}
 
+	// Load available transcription models for the quick-switcher in the title bar
+	useEffect(() => {
+		let cancelled = false
+		;(async () => {
+			try {
+				const root = await invoke<string>('get_models_folder')
+				const entries = await ls(root)
+				const list: { name: string; path: string }[] = []
+				for (const entry of entries) {
+					if (entry.is_dir) {
+						if (isNonTranscribeSubdir(entry.name)) continue
+						const files = await findModelFilesInDir(entry.path)
+						for (const f of files) list.push(f)
+					} else if (isTranscriptionModelFile(entry.name)) {
+						list.push({ name: entry.name, path: entry.path })
+					}
+				}
+				if (!cancelled) setModels(list)
+			} catch {
+				/* ignore in non-Tauri contexts */
+			}
+		})()
+		return () => {
+			cancelled = true
+		}
+	}, [])
+
 	const modelBase = prefs.modelPath?.split(/[\\/]/).pop() || ''
 	const modelLabel = modelBase ? getFriendlyModelName(modelBase) : m.selectModel()
+	const [models, setModels] = useState<{ name: string; path: string }[]>([])
 	const recent = [...prefs.recentFiles].sort((a, b) => b.ts - a.ts)
 
 	return (
@@ -90,7 +121,7 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 			data-tauri-drag-region
 			onDoubleClick={onWindowDoubleClick}
 			className="flex h-14 shrink-0 select-none items-center gap-1.5 border-b border-border/60 bg-card/80 px-2.5 backdrop-blur">
-			<img src="/shiorikotrans.svg" alt="" draggable={false} className="h-7 w-7 rounded-lg" />
+			<img src="/logo.jpg" alt="" draggable={false} className="h-8 w-8 rounded-full object-cover ring-1 ring-border/60" />
 			<span className="me-1 text-[15px] font-semibold tracking-tight">{m.appTitle()}</span>
 
 			<div className="mx-1 flex items-center gap-1 rounded-xl bg-muted/60 p-0.5">
@@ -99,7 +130,7 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 					size="sm"
 					className={cn('h-8 rounded-lg px-2.5', location.pathname === '/' && 'bg-card text-foreground shadow-xs')}
 					onClick={() => navigate('/')}>
-					{m.transcribe()}
+					转录
 				</Button>
 				<Button
 					variant="ghost"
@@ -107,7 +138,7 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 					className={cn('h-8 rounded-lg px-2.5', location.pathname === '/batch' && 'bg-card text-foreground shadow-xs')}
 					onClick={() => navigate('/batch')}>
 					<ListVideo className="h-4 w-4" />
-					{m.batch()}
+					翻译
 				</Button>
 			</div>
 
@@ -153,15 +184,43 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 				</DropdownMenuContent>
 			</DropdownMenu>
 
-			<Button
-				variant="ghost"
-				size="sm"
-				className="h-9 gap-1.5 rounded-lg px-2.5 text-sm"
-				title={m.selectModel()}
-				onClick={() => onOpenSettings('models')}>
-				<Bot className="h-4 w-4" />
-				<span className="hidden max-w-40 truncate lg:inline">{modelLabel}</span>
-			</Button>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						size="sm"
+						className="h-9 max-w-56 gap-1.5 rounded-lg px-2.5 text-sm"
+						title={m.selectModel()}>
+						<Bot className="h-4 w-4 shrink-0" />
+						<span className="truncate">{modelLabel}</span>
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-80 rounded-xl border-border/75 bg-popover/98 p-1.5 shadow-lg">
+					<DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+						{m.selectModel()}
+					</DropdownMenuLabel>
+					{models.length === 0 ? (
+						<p className="px-2.5 py-4 text-center text-sm text-muted-foreground">No models found</p>
+					) : (
+						<div className="max-h-72 overflow-y-auto">
+							{models.map((mdl) => {
+								const active = prefs.modelPath === mdl.path
+								return (
+									<DropdownMenuItem
+										key={mdl.path}
+										onClick={() => prefs.setModelPath(mdl.path)}
+										className={cn(
+											'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm',
+											active && 'bg-primary/10 text-primary',
+										)}>
+										<span className="truncate">{getFriendlyModelName(mdl.name)}</span>
+									</DropdownMenuItem>
+								)
+							})}
+						</div>
+					)}
+				</DropdownMenuContent>
+			</DropdownMenu>
 
 			<Button
 				variant="ghost"

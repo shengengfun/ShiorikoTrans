@@ -21,6 +21,7 @@ export interface AccentPreset {
 }
 
 export const ACCENT_PRESETS: AccentPreset[] = [
+	{ id: 'shioriko', name: 'Shioriko', color: '#37b484', light: { h: 157, s: 55, l: 45 }, dark: { h: 158, s: 68, l: 56 } },
 	{ id: 'blue', name: 'Blue', color: '#1677d3', light: { h: 205, s: 74, l: 43 }, dark: { h: 212, s: 100, l: 56 } },
 	{ id: 'sky', name: 'Sky', color: '#0284c7', light: { h: 199, s: 89, l: 39 }, dark: { h: 199, s: 95, l: 60 } },
 	{ id: 'teal', name: 'Teal', color: '#0d9488', light: { h: 173, s: 80, l: 32 }, dark: { h: 172, s: 70, l: 52 } },
@@ -31,7 +32,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 	{ id: 'fuchsia', name: 'Fuchsia', color: '#c026d3', light: { h: 292, s: 84, l: 49 }, dark: { h: 293, s: 80, l: 64 } },
 ]
 
-export const DEFAULT_ACCENT_ID = 'blue'
+export const DEFAULT_ACCENT_ID = 'shioriko'
 
 /** hex (#rrggbb or #rgb) -> {h,s,l} in 0..360 / 0..100 / 0..100 */
 export function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
