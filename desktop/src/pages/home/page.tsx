@@ -11,7 +11,12 @@ import AudioDeviceInput from '~/components/audio-device-input'
 import { ReactComponent as FileIcon } from '~/icons/file.svg'
 import { ReactComponent as MicrphoneIcon } from '~/icons/microphone.svg'
 import { ReactComponent as LinkIcon } from '~/icons/link.svg'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useLocalStorage } from 'usehooks-ts'
+import { toast } from 'sonner'
+import { setActivity } from '~/lib/activity'
+import { TRANSLATE_LANGUAGES, translateSegments } from '~/lib/translate'
 import { webviewWindow } from '@tauri-apps/api'
 import * as keepAwake from 'tauri-plugin-keepawake-api'
 import { Button } from '~/components/ui/button'
@@ -20,13 +25,20 @@ import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Spinner } from '~/components/ui/spinner'
 import { Switch } from '~/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import AudioVisualizer from './audio-visualizer'
 import ResummarizeDialog from '~/components/resummarize-dialog'
 
 export default function Home() {
 	const vm = viewModel()
+	const navigate = useNavigate()
 	const [showBilingual, setShowBilingual] = useState(false)
+	const [translateTarget, setTranslateTarget] = useState('zh')
+	const [translating, setTranslating] = useState(false)
+	const [autoOpenTranslate, setAutoOpenTranslate] = useLocalStorage('prefs_send_to_translate', false)
+	const sentToTranslateRef = useRef(false)
+	const firstFile = vm.files[0]
 
 	async function showWindow() {
 		const currentWindow = webviewWindow.getCurrentWebviewWindow()
@@ -37,6 +49,45 @@ export default function Home() {
 	useEffect(() => {
 		showWindow()
 	}, [])
+
+	// 勾选后：转写完成即把当前转录文本带到“翻译”页
+	useEffect(() => {
+		if (vm.loading) {
+			sentToTranslateRef.current = false
+			return
+		}
+		if (!autoOpenTranslate || sentToTranslateRef.current || !vm.segments?.length || !firstFile) return
+		sentToTranslateRef.current = true
+		const sourceText = vm.segments.map((segment) => segment.text).join('\n')
+		navigate('/translate', { state: { sourceText, fileName: firstFile.name } })
+	}, [vm.loading, autoOpenTranslate, vm.segments, firstFile, navigate])
+
+	async function translateCurrent() {
+		if (!vm.segments || translating) return
+		const llmConfig = vm.preference.llmConfig
+		if (!llmConfig?.enabled) {
+			toast.error('请先在设置启用 LLM（本地推荐 Ollama）')
+			return
+		}
+		setTranslating(true)
+		setActivity({ phase: 'translating', progress: 0 })
+		try {
+			const translated = await translateSegments(vm.segments, translateTarget, llmConfig, (done, total) =>
+				setActivity({ phase: 'translating', progress: Math.round((done / total) * 100) }),
+			)
+			if (translated.length) {
+				vm.setTranslatedSegments(translated)
+				vm.setTranscriptTab('translated')
+				setShowBilingual(true)
+			}
+		} catch (error) {
+			console.error(error)
+			toast.error(String(error))
+		} finally {
+			setTranslating(false)
+			setActivity({ phase: 'idle' })
+		}
+	}
 
 	return (
 		<Layout>
@@ -202,6 +253,10 @@ export default function Home() {
 									<Button onMouseDown={() => vm.transcribe(vm.files[0].path)} className="mt-1 w-full" disabled={!vm.preference.modelPath}>
 										{m.transcribe()}
 									</Button>
+									<label className="mt-1 flex items-center justify-between gap-2 rounded-xl border border-border/40 bg-muted/40 px-4 py-2.5">
+										<span className="text-sm">转写后转到翻译页</span>
+										<Switch checked={autoOpenTranslate} onCheckedChange={setAutoOpenTranslate} />
+									</label>
 									{!vm.preference.modelPath && (
 										<p className="text-center text-sm text-muted-foreground">{m.noModelSelected()}</p>
 									)}
@@ -270,6 +325,29 @@ export default function Home() {
 								onClick={() => setShowBilingual((value) => !value)}>
 								双语
 							</Button>
+						)}
+					</div>
+				)}
+
+				{firstFile && vm.segments && !vm.loading && (
+					<div className="flex flex-wrap items-center gap-2">
+						<Select value={translateTarget} onValueChange={setTranslateTarget}>
+							<SelectTrigger className="h-9 w-36 rounded-lg text-sm capitalize"><SelectValue /></SelectTrigger>
+							<SelectContent>
+								{TRANSLATE_LANGUAGES.map((lang) => (
+									<SelectItem key={lang.code} value={lang.code}>{lang.name}</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<Button
+							size="sm"
+							className="rounded-lg"
+							disabled={translating || !vm.preference.llmConfig?.enabled}
+							onClick={translateCurrent}>
+							{translating ? '翻译中…' : '翻译'}
+						</Button>
+						{!vm.preference.llmConfig?.enabled && (
+							<p className="text-xs text-muted-foreground">需在设置启用 LLM（本地推荐 Ollama）</p>
 						)}
 					</div>
 				)}

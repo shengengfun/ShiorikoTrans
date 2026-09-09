@@ -39,7 +39,7 @@ export function viewModel() {
 		setTranscriptTab,
 		summarize,
 	} = useSummarization()
-	const { loading, isAborting, segments, setSegments, translatedSegments, progress, setProgress, transcribe, onAbort } = useTranscription({
+	const { loading, isAborting, segments, setSegments, translatedSegments, setTranslatedSegments, progress, setProgress, transcribe, onAbort } = useTranscription({
 		onResetSummary: () => {
 			setSummarizeSegments(null)
 			setTranscriptTab('transcript')
@@ -238,6 +238,7 @@ export function viewModel() {
 		segments,
 		setSegments,
 		translatedSegments,
+		setTranslatedSegments,
 		transcribe,
 		onAbort,
 		switchToLinkTab,

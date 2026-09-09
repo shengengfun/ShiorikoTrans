@@ -5,6 +5,7 @@ import '~/globals.css'
 import SetupPage from '~/pages/setup/page'
 import HomePage from '~/pages/home/page'
 import BatchPage from './pages/batch/page'
+import TranslatePage from './pages/translate/page'
 import { ErrorModalProvider } from './providers/error-modal'
 import { PreferenceProvider } from './providers/preference'
 import { usePreferenceProvider } from './providers/preference'
@@ -47,6 +48,7 @@ function AppContent() {
 										<Route path="/" element={<HomePage />} />
 										<Route path="/setup" element={<SetupPage />} />
 										<Route path="/batch" element={<BatchPage />} />
+										<Route path="/translate" element={<TranslatePage />} />
 									</Routes>
 								</FilesProvider>
 								<Toaster position="bottom-right" />

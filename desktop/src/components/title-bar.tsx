@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { listen } from '@tauri-apps/api/event'
 import { platform } from '@tauri-apps/plugin-os'
-import { Bot, History, ListVideo, Minus, Settings2, Square, X } from 'lucide-react'
+import { Bot, History, Languages, ListVideo, Minus, Settings2, Square, X } from 'lucide-react'
 import { m } from '~/paraglide/messages.js'
 import { usePreferenceProvider, type RecentFile } from '~/providers/preference'
 import { useFilesContext } from '~/providers/files-provider'
@@ -138,6 +138,14 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 					className={cn('h-8 rounded-lg px-2.5', location.pathname === '/batch' && 'bg-card text-foreground shadow-xs')}
 					onClick={() => navigate('/batch')}>
 					<ListVideo className="h-4 w-4" />
+					批量
+				</Button>
+				<Button
+					variant="ghost"
+					size="sm"
+					className={cn('h-8 rounded-lg px-2.5', location.pathname === '/translate' && 'bg-card text-foreground shadow-xs')}
+					onClick={() => navigate('/translate')}>
+					<Languages className="h-4 w-4" />
 					翻译
 				</Button>
 			</div>
