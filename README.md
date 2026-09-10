@@ -1,125 +1,210 @@
 <p align="center">
-  <a target="blank" href="https://github.com/shiorikotrans/shiorikotrans">
+  <a target="_blank" href="https://github.com/shengengfun/ShiorikoTrans">
     <img
-        width="96px"
+        width="128px"
         alt="ShiorikoTrans logo"
         src="./design/logo.png"
     />
   </a>
 </p>
 
-<h1 align="center">ShiorikoTrans - Transcribe on your own!</h1>
+<h1 align="center">ShiorikoTrans</h1>
 
 <p align="center">
-  <strong>⌨️ Transcribe audio and video right on your device</strong>
+  <strong>⌨️ 在你的设备上转写音频与视频</strong>
   <br/>
+  <sub>完全本地运行 · 断网可用 · 数据永不离开你的电脑</sub>
 </p>
 
 <p align="center">
-  <a target="_blank" href="https://shiorikotrans.github.io/shiorikotrans/">
-    🔗 Download ShiorikoTrans
+  <a target="_blank" href="https://github.com/shengengfun/ShiorikoTrans/releases/latest">
+    ⬇️ 下载 ShiorikoTrans
   </a>
-    &nbsp; | &nbsp; Give it a Star ⭐ | &nbsp;
-    <a target="_blank" href="https://shiorikotrans.github.io/shiorikotrans/?action=support-shiorikotrans">Support the project 🤝</a>
+  &nbsp; | &nbsp;
+  <a target="_blank" href="https://github.com/shengengfun/ShiorikoTrans/stargazers">给它一颗星 ⭐</a>
+  &nbsp; | &nbsp;
+  <a target="_blank" href="https://github.com/shengengfun/ShiorikoTrans/issues/new/choose">反馈问题 🐛</a>
+</p>
+
+<p align="center">
+  <a target="_blank" href="https://github.com/shengengfun/ShiorikoTrans/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/shengengfun/ShiorikoTrans?label=release&color=2ea44f" /></a>
+  <a target="_blank" href="https://github.com/shengengfun/ShiorikoTrans/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/shengengfun/ShiorikoTrans/total?label=downloads" /></a>
+  <img alt="Platforms" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue" />
+  <a target="_blank" href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-informational" /></a>
+  <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB" />
 </p>
 
 <hr />
 
-## Screenshots
+# 这是什么
 
-<p align="center">
-	<a target="_blank" href="https://shiorikotrans.github.io/shiorikotrans/">
-    	<img width=600 src="https://github.com/shiorikotrans/shiorikotrans/assets/61390950/22779ac6-9e49-4c21-b528-29647f039da2">
-	</a>
-</p>
+**ShiorikoTrans** 是一款基于 [Tauri 2](https://tauri.app/)（Rust + React）的桌面转写工具：把音频、视频、网页链接或系统声音丢进去，片刻后就能拿到带时间轴的字幕。
 
-# Features 🌟
+所有识别都在你自己的电脑上完成 —— 不需要上传文件、不需要账号、不需要联网。模型权重只需下载一次，之后可以完全断网使用。
 
-- 🌍 Transcribe almost every language
-- 🔒 Ultimate privacy: fully offline transcription, no data ever leaves your device
-- 🎨 User friendly design
-- 🎙️ Transcribe audio / video
-- 🎶 Option to transcribe audio from popular websites (YouTube, Vimeo, Facebook, Twitter and more!)
-- 📂 Batch transcribe multiple files!
-- 📝 Support `SRT`, `VTT`, `TXT`, `HTML`, `PDF`, `JSON`, `DOCX` formats
-- 👀 Realtime preview
-- 🤖 Supports Whisper, Nemotron 3.5, and Parakeet TDT v3 models
-- ✨ Summarize transcripts: Get quick, multilingual summaries using the Claude API
-- 🧠 Ollama support: Do local AI analysis and batch summaries with Ollama
-- 🌐 Translate to English from any language
-- 🖨️ Print transcript directly to any printer
-- 🔄 Automatic updates
-- 💻 Optimized for `GPU` (`macOS`, `Windows`, `Linux`)
-- 🎮 Optimized for `Nvidia` / `AMD` / `Intel` GPUs! (`Vulkan`/`CoreML`)
-- 🔧 Total Freedom: Customize Models Easily via Settings
-- ⚙️ Model arguments for advanced users
-- ⏳ Transcribe system audio
-- 🎤 Transcribe from microphone
-- 🖥️ CLI support: Use ShiorikoTrans directly from the command line interface! (see `--help`)
-- 👥 Speaker diarization
-- 🎬 Stable timestamps mode for subtitle/movie-grade timing (VAD-backed, slower)
-- 📱 ~iOS & Android support~ (coming soon)
-- 📥 Integrate custom models from your own site: Use `shiorikotrans://download/?url=<model url>`
-- 📹 Choose caption length optimized for videos / reels
-- ⚡ HTTP API with Swagger docs and agent skills
+# 新版本亮点 · v1.0.2
 
-# Supported platforms 🖥️
+- 🎨 **全新品牌图标**：应用图标、窗口 / 任务栏图标、macOS `.icns`、Windows `.ico` 与各尺寸 PNG 全部改为由 `logo.jpg` 生成
+- 🪟 **安装包图标同步替换**：`bundle.windows.nsis.installerIcon` 显式指向新的 `icons/icon.ico`，NSIS 安装向导与卸载程序均使用新图标
+- 📝 重写 README（就是你现在看到的这份）
 
-`MacOS`
-`Windows`
-`Linux`
+# 下载与安装 ⬇️
 
-# Contribute 🤝
+前往 [**Releases**](https://github.com/shengengfun/ShiorikoTrans/releases/latest) 下载对应平台的安装包。
 
-## Developers
+| 平台 | 文件 | 说明 |
+| --- | --- | --- |
+| Windows | `ShiorikoTrans_1.0.2_x64-setup.exe` | **推荐**。NSIS 安装包，自带 `sona` 引擎，自动创建开始菜单与桌面快捷方式 |
+| macOS | `ShiorikoTrans_1.0.2_<arch>.dmg` | 打开后把 App 拖进 Applications |
+| Linux | `ShiorikoTrans_1.0.2_amd64.deb` / `ShiorikoTrans-1.0.2-1.x86_64.rpm` | Debian / Ubuntu、Fedora / RHEL |
 
-Get started with local development [here](docs/building.md).
+> 想要免安装的绿色版？按 [docs/building.md](docs/building.md) 自行构建即可得到 `shiorikotrans.exe` 及同目录的 `sona` sidecar。
+>
+> 首次转写前请在 **设置 → 模型** 里下载一个识别模型（推荐 **Large v3 Turbo**），没有模型时启动向导会提示下载。
 
-PRs are welcomed!
-In addition, you're welcome to add translations.
+# 功能特性 🌟
 
-We would like to express our sincere gratitude to all the contributors.
+## 转写
 
-<a href="https://github.com/shiorikotrans/shiorikotrans/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=shiorikotrans/shiorikotrans" />
-</a>
+- 🌍 支持近 100 种语言，可自动检测语种
+- 🎙️ 四种输入来源：麦克风录音、系统声音、本地音视频文件、网络链接
+- 📂 批量队列：一次丢进多个文件，排队自动跑完
+- 🔗 从 YouTube、Bilibili 等 `yt-dlp` 支持的站点直接拉流转写
+- 👀 实时预览：边转写边出字幕
+- ⏰ 句级 / 词级时间戳（词级适合 JSON 二次处理）
+- 🎬 **稳定时间戳模式**：VAD 支持，字幕 / 影片级对轴更稳（速度更慢）
+- 👥 说话人分离（speaker diarization）
+- 📹 面向短视频的字幕行长预设
 
-# Community
+## 导出
 
-[![Discord](https://img.shields.io/badge/chat-discord-7289da.svg)](https://discord.gg/EcxWSstQN8)
+- 📝 `SRT`、`VTT`、`TXT`、`HTML`、`PDF`、`JSON`、`DOCX`
+- 💬 双语字幕导出（原文 + 译文双行，可导出双语 SRT）
+- 🖨️ 直接把转写结果发送到打印机
 
-# Roadmap 🛣️
+## 翻译与摘要
 
-You can see the roadmap in [ShiorikoTrans-Roadmap](https://github.com/users/thewh1teagle/projects/5/views/1)
+- 🌐 字幕 / 文本翻译：接入 **Claude**、任意 **OpenAI 兼容接口**，或本地 **Ollama**
+- 📚 术语表（glossary），保证专有名词译法统一
+- ✨ 多语言摘要
+- 🔀 转录结果可一键「发送到翻译页」
 
-# Add translation 🌐
+## 界面与体验
 
-See the [translation guide](docs/translations.md).
+- 🪟 无边框窗口 + 自绘标题栏（拖拽区、最小化 / 最大化 / 关闭、最近文件）
+- 📊 底部状态栏实时显示 CPU / 内存占用与任务进度
+- 🎨 主题色预设 + 自定义色值 + 自定义背景图，亮色 / 暗色主题
+- 🕘 最近打开的文件、转录历史、任务队列
+- 🌏 界面支持 19 种语言（含简体中文、繁体中文）
 
-# Docs 📄
+## 进阶能力
 
-see [ShiorikoTrans Docs](https://github.com/shiorikotrans/shiorikotrans/tree/main/docs)
+- 🖥️ CLI：`shiorikotrans --help`
+- ⚡ 本地 HTTP API，附 Swagger 文档，方便脚本与自动化接入
+- 🔧 设置内自由添加自定义模型、调整模型参数
+- 📥 自定义模型分发：`shiorikotrans://download/?url=<模型地址>`
+- 🎮 GPU 加速：Nvidia / AMD / Intel（`Vulkan` / `CoreML` / `DirectML`），也支持纯 CPU
 
-# I want to know more!
+# 支持的平台 🖥️
 
-Medium [post](https://medium.com/@thewh1teagle/creating-shiorikotrans-multilingual-audio-transcription-872ab6d9dbb0)
+| 平台 | 架构 | 状态 |
+| --- | --- | --- |
+| Windows 10 / 11 | x64 | ✅ 主要开发与发布平台 |
+| macOS | Intel / Apple Silicon | ✅ |
+| Linux | x64 | ✅ |
 
-# Issue report
+# 模型与引擎 🤖
 
-You can open [new issue](https://github.com/shiorikotrans/shiorikotrans/issues/new?assignees=octocat&labels=bug&projects=&template=bug_report.yaml&title=[Short+title]) and it's recommend to check [debug.md](docs/debug.md) first.
+- 识别模型：**Whisper** 系列（Tiny → Large v3 / Large v3 Turbo）、**Parakeet TDT 0.6B v3**、**Nemotron 3.5 ASR Streaming 0.6B**
+- 推理引擎：[`sona`](https://github.com/thewh1teagle/sona) —— Rust + `whisper.cpp` / ggml 的本地推理进程，由 App 以 sidecar 方式拉起，通过本地 HTTP 通信
+- 模型目录按用途分文件夹：`models/transcribe`、`models/translate`、`models/vad`、`models/diarize`
+- 可选模型清单与下载地址见 [docs/models.md](docs/models.md)
 
-# Privacy Policy 🔒
+# 文档 📄
 
-Your privacy is important to us. Please review our [Privacy Policy](http://shiorikotrans.github.io/shiorikotrans/?action=open-privacy-policy) to understand how we handle your data.
+| 文档 | 内容 |
+| --- | --- |
+| [docs/building.md](docs/building.md) | 本地开发与构建 |
+| [docs/architecture.md](docs/architecture.md) | 架构说明（Tauri 前端 / Rust 后端 / sona 引擎） |
+| [docs/models.md](docs/models.md) | 模型清单与手工安装 |
+| [docs/install.md](docs/install.md) | 安装说明 |
+| [docs/debug.md](docs/debug.md) | 出问题时如何抓日志 |
+| [docs/translations.md](docs/translations.md) | 界面翻译指南 |
 
-# Credits
+# 项目结构 📁
 
-Thanks for [tauri.app](https://tauri.app/) for making the best apps framework I ever seen
+```text
+desktop/                  Tauri 桌面应用（React 前端 + Rust 后端）
+desktop/src-tauri/icons/  全套应用图标（由根目录 logo.jpg 生成）
+desktop/public/           前端静态资源（标题栏 logo 等）
+design/                   设计资源（README 用的 logo、DMG 背景等）
+sona/                     sona 推理引擎（本地检出）
+website/                  项目主页（仍为上游 Audire 品牌，未参与改名）
+docs/                     构建、架构、模型、翻译等文档
+i18n/                     界面翻译（inlang）
+plans/                    开发过程记录与可复现的验证脚本
+scripts/                  构建、发布与统计辅助脚本
+logo.jpg                  品牌主图 —— 所有图标的唯一来源
+```
 
-Thanks for [github.com/whisper.cpp](https://github.com/ggerganov/whisper.cpp) for outstanding interface for the AI model.
+# 开发 🤝
 
-Thanks for [openai.com](https://openai.com/) for their amazing [Whisper model](https://openai.com/research/whisper)
+环境要求：[`pnpm`](https://pnpm.io/)、[`cargo`](https://www.rust-lang.org/tools/install)，以及可选的 [`uv`](https://docs.astral.sh/uv/)。
 
-Thanks for [github.com](https://github.com/) for their support in open source projects, providing infastructure completely free.
+```bash
+# 1. 准备 sidecar（sona / ffmpeg）与平台依赖
+uv run scripts/pre_build.py
 
-And for all the amazing open source frameworks and libraries which this project uses...
+# 2. 安装前端依赖
+cd desktop
+pnpm install
+
+# 3. 开发模式
+pnpm exec tauri dev
+
+# 4. 生产构建（Windows 产出 exe + NSIS 安装包）
+pnpm exec tauri build --bundles nsis
+```
+
+构建产物：
+
+- 可执行文件：`target/release/shiorikotrans.exe`
+- 安装包：`target/release/bundle/nsis/ShiorikoTrans_<版本>_x64-setup.exe`
+
+改完 `logo.jpg` 后重新生成整套图标：
+
+```bash
+cd desktop
+.\node_modules\.bin\tauri.cmd icon ..\logo.jpg   # 标准图标集：PNG / ICO / ICNS / Android / iOS
+python ..\plans\app-icons\app-icons_001.py       # 补齐 legacy PNG 与 design 资源
+```
+
+更多细节见 [docs/building.md](docs/building.md)。
+
+# 参与翻译 🌐
+
+界面翻译位于 `i18n/translations/`，欢迎新增语言或修正现有译文 —— 见[翻译指南](docs/translations.md)。
+
+# 隐私政策 🔒
+
+转写默认 100% 在本地完成，音频、视频与转写文本都不会离开你的设备。
+只有当你自己配置了云端 LLM（Claude / OpenAI 兼容接口）并使用翻译或摘要功能时，相应文本才会发送给该服务商。
+详见[隐私政策](website/public/privacy_policy.md)。
+
+# 反馈问题 🐛
+
+请先阅读 [docs/debug.md](docs/debug.md)，然后通过 [Issue](https://github.com/shengengfun/ShiorikoTrans/issues/new/choose) 反馈；附上日志会快很多。
+
+# 致谢
+
+- [tauri.app](https://tauri.app/) —— 让桌面应用开发变得轻快的框架
+- [whisper.cpp](https://github.com/ggerganov/whisper.cpp) —— 出色的本地语音识别推理实现
+- [OpenAI Whisper](https://openai.com/research/whisper) —— Whisper 模型本身
+- [sona](https://github.com/thewh1teagle/sona) —— 本项目使用的本地推理引擎
+- [thewh1teagle](https://github.com/thewh1teagle) —— 本项目二次开发所基于的 **Audire** 上游作者
+
+以及所有被本项目使用的开源库与框架。
+
+# 许可 📄
+
+[MIT](LICENSE) © 2024 thewh1teagle
