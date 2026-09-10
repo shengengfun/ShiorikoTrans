@@ -202,6 +202,7 @@ python ..\plans\app-icons\app-icons_001.py       # 补齐 legacy PNG 与 design 
 - [OpenAI Whisper](https://openai.com/research/whisper) —— Whisper 模型本身
 - [sona](https://github.com/thewh1teagle/sona) —— 本项目使用的本地推理引擎
 - [thewh1teagle](https://github.com/thewh1teagle) —— 本项目二次开发所基于的 **Audire** 上游作者
+- [DeepSeek](https://www.deepseek.com/) —— 本项目开发协作使用的 AI 编程助手（DeepSeek V4 Flash）
 
 以及所有被本项目使用的开源库与框架。
 
