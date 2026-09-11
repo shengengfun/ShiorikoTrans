@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { Switch } from '~/components/ui/switch'
 import { Textarea } from '~/components/ui/textarea'
 import { useAuxModelToggles } from '~/lib/aux-model-toggles'
-import { useTranscriptionModels, modelDisplayName } from '~/lib/model-list'
+import { useTranscriptionModels, modelDisplayName, modelNameFromPath } from '~/lib/model-list'
 import { getModelPipelineFromPath, MODEL_PIPELINES, type ModelPipeline } from '~/lib/model-pipeline'
 import { usePreferenceProvider } from '~/providers/preference'
 
@@ -62,7 +62,7 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 	const path = modelPath ?? preference.modelPath
 	const entry = models.find((model) => model.path === path)
 	const pipeline: ModelPipeline = path ? getModelPipelineFromPath(path) : MODEL_PIPELINES.custom
-	const name = entry ? modelDisplayName(entry, preference.modelDisplayNames) : path ? (path.split(/[\\/]/).pop() ?? '') : m.selectModel()
+	const name = entry ? modelDisplayName(entry, preference.modelDisplayNames) : path ? modelNameFromPath(path) : m.selectModel()
 	const options = preference.modelOptions
 	const setOptions = preference.setModelOptions
 	const isWhisper = pipeline.type === 'whisper' || pipeline.type === 'custom'
@@ -150,17 +150,19 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 												/>
 											</div>
 										)}
-										<div className="space-y-2">
-											<Label className="flex items-center gap-1">
-												<InfoTooltip text={m.infoMaxSentenceLen()} />
-												{m.maxSentenceLen()}
-											</Label>
-											<Input
-												type="number"
-												value={options.max_sentence_len}
-												onChange={(event) => setOptions({ ...options, max_sentence_len: parseIntOr(event.target.value, 1) })}
-											/>
-										</div>
+										{pipeline.supportsWordTimestamps && (
+											<div className="space-y-2">
+												<Label className="flex items-center gap-1">
+													<InfoTooltip text={m.infoMaxSentenceLen()} />
+													{m.maxSentenceLen()}
+												</Label>
+												<Input
+													type="number"
+													value={options.max_sentence_len}
+													onChange={(event) => setOptions({ ...options, max_sentence_len: parseIntOr(event.target.value, 1) })}
+												/>
+											</div>
+										)}
 									</div>
 								</div>
 

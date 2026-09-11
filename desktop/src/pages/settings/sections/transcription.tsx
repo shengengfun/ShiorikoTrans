@@ -1,9 +1,7 @@
 import LanguageInput from '~/components/language-input'
-import { SectionCard, type SettingsViewModel } from './shared'
+import { SectionCard } from './shared'
 
-export function TranscriptionSection({ vm }: { vm: SettingsViewModel }) {
-	void vm
-
+export function TranscriptionSection() {
 	return (
 		<div className="space-y-5">
 			<SectionCard>

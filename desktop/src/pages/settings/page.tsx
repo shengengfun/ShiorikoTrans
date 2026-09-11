@@ -124,7 +124,7 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 
 					{activeSection === 'appearance' && <AppearanceSection vm={vm} />}
 
-					{activeSection === 'transcription' && <TranscriptionSection vm={vm} />}
+					{activeSection === 'transcription' && <TranscriptionSection />}
 
 					{activeSection === 'models' && <ModelsSection vm={vm} />}
 
