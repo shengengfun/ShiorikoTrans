@@ -10,28 +10,34 @@
 
 export interface AccentPreset {
 	id: string
-	/** Display name (locale-agnostic for now). */
-	name: string
-	/** main accent color shown on the swatch. */
+	/** i18n key suffix (`color<Name>`) used for the swatch tooltip. */
+	label: string
+	/** 虹咲学园角色应援色 (Nijigasaki character colour). */
 	color: string
-	/** hue / sat% / light% used for the LIGHT scheme. */
-	light: { h: number; s: number; l: number }
-	/** hue / sat% / light% used for the DARK scheme. */
-	dark: { h: number; s: number; l: number }
 }
 
+/**
+ * Built-in accent colours — the Nijigasaki character colours, mirroring the
+ * palette used by RinaDown. The light/dark variants are derived from the hex
+ * value (see `resolveAccent`) so adding a colour is a one-liner.
+ */
 export const ACCENT_PRESETS: AccentPreset[] = [
-	{ id: 'shioriko', name: 'Shioriko', color: '#37b484', light: { h: 157, s: 55, l: 45 }, dark: { h: 158, s: 68, l: 56 } },
-	{ id: 'blue', name: 'Blue', color: '#1677d3', light: { h: 205, s: 74, l: 43 }, dark: { h: 212, s: 100, l: 56 } },
-	{ id: 'sky', name: 'Sky', color: '#0284c7', light: { h: 199, s: 89, l: 39 }, dark: { h: 199, s: 95, l: 60 } },
-	{ id: 'teal', name: 'Teal', color: '#0d9488', light: { h: 173, s: 80, l: 32 }, dark: { h: 172, s: 70, l: 52 } },
-	{ id: 'emerald', name: 'Emerald', color: '#059669', light: { h: 161, s: 94, l: 30 }, dark: { h: 158, s: 64, l: 52 } },
-	{ id: 'violet', name: 'Violet', color: '#7c3aed', light: { h: 262, s: 83, l: 58 }, dark: { h: 258, s: 90, l: 66 } },
-	{ id: 'rose', name: 'Rose', color: '#e11d48', light: { h: 348, s: 77, l: 48 }, dark: { h: 348, s: 90, l: 60 } },
-	{ id: 'amber', name: 'Amber', color: '#d97706', light: { h: 32, s: 95, l: 44 }, dark: { h: 38, s: 92, l: 55 } },
-	{ id: 'fuchsia', name: 'Fuchsia', color: '#c026d3', light: { h: 292, s: 84, l: 49 }, dark: { h: 293, s: 80, l: 64 } },
+	{ id: 'ayumu', label: 'colorAyumu', color: '#ed7d95' },
+	{ id: 'kasumi', label: 'colorKasumi', color: '#e7d600' },
+	{ id: 'shizuku', label: 'colorShizuku', color: '#01b7ed' },
+	{ id: 'karin', label: 'colorKarin', color: '#485ec6' },
+	{ id: 'ai', label: 'colorAi', color: '#ff5800' },
+	{ id: 'kanata', label: 'colorKanata', color: '#a664a0' },
+	{ id: 'setsuna', label: 'colorSetsuna', color: '#d81c2f' },
+	{ id: 'emma', label: 'colorEmma', color: '#84c36e' },
+	{ id: 'rina', label: 'colorRina', color: '#9ca5b9' },
+	{ id: 'shioriko', label: 'colorShioriko', color: '#37b484' },
+	{ id: 'mia', label: 'colorMia', color: '#a9a898' },
+	{ id: 'lanzhu', label: 'colorLanzhu', color: '#f69992' },
+	{ id: 'yu', label: 'colorYu', color: '#1d1d1d' },
 ]
 
+/** Default accent: 三船栞子 (Mifune Shioriko). */
 export const DEFAULT_ACCENT_ID = 'shioriko'
 
 /** hex (#rrggbb or #rgb) -> {h,s,l} in 0..360 / 0..100 / 0..100 */
@@ -65,11 +71,54 @@ function hslCss({ h, s, l }: { h: number; s: number; l: number }): string {
 	return `hsl(${h} ${s}% ${l}%)`
 }
 
+/** HSL (h 0..360, s/l 0..100) -> `#rrggbb`. */
+export function hslToHex({ h, s, l }: { h: number; s: number; l: number }): string {
+	const sat = Math.min(100, Math.max(0, s)) / 100
+	const light = Math.min(100, Math.max(0, l)) / 100
+	const hue = ((h % 360) + 360) % 360
+	const c = (1 - Math.abs(2 * light - 1)) * sat
+	const x = c * (1 - Math.abs(((hue / 60) % 2) - 1))
+	const m = light - c / 2
+	const [r, g, b] = hue < 60 ? [c, x, 0] : hue < 120 ? [x, c, 0] : hue < 180 ? [0, c, x] : hue < 240 ? [0, x, c] : hue < 300 ? [x, 0, c] : [c, 0, x]
+	const toHex = (value: number) =>
+		Math.round((value + m) * 255)
+			.toString(16)
+			.padStart(2, '0')
+	return `#${toHex(r)}${toHex(g)}${toHex(b)}`
+}
+
+/** Relative luminance (0..1) of a hex colour — used to pick a readable foreground. */
+export function relativeLuminance(hex: string): number {
+	const hsl = hexToHsl(hex)
+	if (!hsl) return 0.5
+	const { r, g, b } = hslToRgb(hsl)
+	const channel = (value: number) => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+}
+
+function hslToRgb({ h, s, l }: { h: number; s: number; l: number }) {
+	const sat = Math.min(100, Math.max(0, s)) / 100
+	const light = Math.min(100, Math.max(0, l)) / 100
+	const hue = ((h % 360) + 360) % 360
+	const c = (1 - Math.abs(2 * light - 1)) * sat
+	const x = c * (1 - Math.abs(((hue / 60) % 2) - 1))
+	const m = light - c / 2
+	const [r, g, b] = hue < 60 ? [c, x, 0] : hue < 120 ? [x, c, 0] : hue < 180 ? [0, c, x] : hue < 240 ? [0, x, c] : hue < 300 ? [x, 0, c] : [c, 0, x]
+	return { r: r + m, g: g + m, b: b + m }
+}
+
+/** Foreground colour for text/icons drawn on top of `hex`. */
+export function onAccentColor(hex: string): string {
+	return relativeLuminance(hex) > 0.55 ? 'hsl(224 24% 12%)' : 'hsl(0 0% 100%)'
+}
+
 /**
  * Variables that carry the "primary" hue across the UI. Overriding these keeps
  * buttons, accents, rings, charts and sidebar in sync with the chosen color.
  */
 const ACCENT_VARS = ['--primary', '--ring', '--sidebar-primary', '--sidebar-ring', '--chart-1'] as const
+/** Foreground colours that must stay readable on top of the accent. */
+const ACCENT_FOREGROUND_VARS = ['--primary-foreground', '--sidebar-primary-foreground'] as const
 
 export type ThemeScheme = 'light' | 'dark'
 
@@ -319,40 +368,53 @@ export function applyThemePalette(paletteId: string, scheme: ThemeScheme) {
 export interface ResolvedAccent {
 	light: { h: number; s: number; l: number }
 	dark: { h: number; s: number; l: number }
+	/** The colour as authored, used for previews. */
+	base: string
 }
 
-/** Resolve a user's accent choice (custom hex wins over preset id). */
+/** The accent hex the user picked (custom hex wins over preset id). */
+export function accentHex(presetId: string, customHex: string | null): string | null {
+	if (customHex) return customHex
+	return ACCENT_PRESETS.find((preset) => preset.id === presetId)?.color ?? null
+}
+
+/** Resolve a user's accent choice into light/dark HSL variants. */
 export function resolveAccent(presetId: string, customHex: string | null): ResolvedAccent | null {
-	if (customHex) {
-		const hsl = hexToHsl(customHex)
-		if (hsl) {
-			return {
-				light: { ...hsl },
-				// Dark scheme: brighten the accent a bit so it pops on dark surfaces.
-				dark: { h: hsl.h, s: Math.min(100, hsl.s + 12), l: Math.min(68, hsl.l + 20) },
-			}
-		}
+	const base = accentHex(presetId, customHex)
+	if (!base) return null
+	const hsl = hexToHsl(base)
+	if (!hsl) return null
+	return {
+		base,
+		// Light scheme: keep the accent dark enough to stay readable on white.
+		light: { h: hsl.h, s: hsl.s, l: Math.min(hsl.l, 46) },
+		// Dark scheme: brighten it so it pops on dark surfaces.
+		dark: { h: hsl.h, s: Math.min(100, hsl.s + 10), l: Math.max(52, Math.min(72, hsl.l + 18)) },
 	}
-	const preset = ACCENT_PRESETS.find((p) => p.id === presetId)
-	if (preset) return { light: preset.light, dark: preset.dark }
-	return null
 }
 
 /** Applies (or clears) the accent color on <html> using inline styles. */
 export function applyAccentColor(presetId: string, customHex: string | null, scheme: ThemeScheme) {
 	const el = document.documentElement
+	const clear = () => {
+		for (const cssVar of [...ACCENT_VARS, ...ACCENT_FOREGROUND_VARS]) el.style.removeProperty(cssVar)
+	}
+	// The default (三船栞子) keeps the hand-tuned values from globals.css.
 	if (presetId === DEFAULT_ACCENT_ID && !customHex) {
-		for (const v of ACCENT_VARS) el.style.removeProperty(v)
+		clear()
 		return
 	}
 	const resolved = resolveAccent(presetId, customHex)
 	if (!resolved) {
-		for (const v of ACCENT_VARS) el.style.removeProperty(v)
+		clear()
 		return
 	}
 	const hsl = scheme === 'dark' ? resolved.dark : resolved.light
 	const css = hslCss(hsl)
-	for (const v of ACCENT_VARS) el.style.setProperty(v, css)
+	for (const cssVar of ACCENT_VARS) el.style.setProperty(cssVar, css)
+	// Light accents (yellow, cream, …) need dark text on top of them.
+	const onAccent = onAccentColor(hslToHex(hsl))
+	for (const cssVar of ACCENT_FOREGROUND_VARS) el.style.setProperty(cssVar, onAccent)
 }
 
 /** Blur a small overlay on top of body for readability behind custom background. */

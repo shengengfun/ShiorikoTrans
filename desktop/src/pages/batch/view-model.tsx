@@ -11,7 +11,7 @@ import { validPath } from '~/lib/media'
 import { startKeepAwake, stopKeepAwake } from '~/lib/keep-awake'
 import * as webview from '@tauri-apps/api/webviewWindow'
 import * as dialog from '@tauri-apps/plugin-dialog'
-import { resolveAuxModelPath } from '~/lib/model-paths'
+import { prepareTranscribeOptions } from '~/lib/transcribe-options'
 import * as config from '~/lib/config'
 import { setActivity } from '~/lib/activity'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
@@ -169,23 +169,14 @@ export function viewModel() {
 		if (!preference.modelPath) {
 			throw new Error('No model selected. Please download or select a model first.')
 		}
+		const modelPath = preference.modelPath
 		const loadResult = await invoke<string>('load_model', {
-			modelPath: preference.modelPath,
+			modelPath,
 			gpuDevice: preference.gpuDevice,
 			unloadTimeoutMinutes: preference.unloadTimeoutMinutes,
 		})
 		if (loadResult === 'gpu_fallback') {
 			toast.warning(m.gpuFallbackToCpu(), { position: 'bottom-center', duration: 8000 })
-		}
-		let diarize_model: string | undefined
-		if (preference.diarizeEnabled) {
-			const modelsFolder = await invoke<string>('get_models_folder')
-			diarize_model = await resolveAuxModelPath(modelsFolder, 'diarize', config.diarizeModelFilename)
-		}
-		let vad_model: string | undefined
-		if (preference.stableTimestampsEnabled || preference.modelMetadata?.capabilities.requires_vad) {
-			const modelsFolder = await invoke<string>('get_models_folder')
-			vad_model = await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename)
 		}
 		setCurrentIndex(localIndex)
 		const loopStartTime = performance.now()
@@ -195,13 +186,16 @@ export function viewModel() {
 					break
 				}
 				setProgress(null)
-				const options = {
+				// Engine-aware options: only pass what the selected model supports and
+				// attach the helper models it needs (VAD is downloaded on demand).
+				const { options } = await prepareTranscribeOptions({
 					path: file.path,
-					...preference.modelOptions,
-					...(diarize_model ? { diarize_model } : {}),
-					...(vad_model ? { vad_model } : {}),
-					...(preference.stableTimestampsEnabled ? { stable_timestamps: true } : {}),
-				}
+					modelPath,
+					modelMetadata: preference.modelMetadata,
+					modelOptions: preference.modelOptions,
+					diarizeEnabled: preference.diarizeEnabled,
+					stableTimestampsEnabled: preference.stableTimestampsEnabled,
+				})
 				const startTime = performance.now()
 
 				// Check if exists

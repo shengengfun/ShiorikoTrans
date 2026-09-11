@@ -26,6 +26,17 @@ export interface CatalogModel {
 	files: CatalogFile[]
 }
 
+/** A family of models sharing one engine (Whisper / NVIDIA NeMo / SenseVoice). */
+export interface CatalogGroup {
+	id: string
+	/** Engine shown on the group badge. */
+	engine: ModelType
+	name: string
+	/** i18n key for the short description (language coverage / requirements). */
+	hintKey: string
+	models: CatalogModel[]
+}
+
 const HF = 'https://huggingface.co'
 const whisperCpp = (file: string) => `${HF}/ggerganov/whisper.cpp/resolve/main/${file}`
 const parakeetV3 = (file: string) => `${HF}/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/main/${file}`
@@ -33,113 +44,160 @@ const nemotron = (file: string) => `${HF}/handy-computer/nemotron-3.5-asr-stream
 const senseVoice = (file: string) => `${HF}/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/${file}`
 
 /**
- * Curated, one-click installable transcription models.
+ * Curated, one-click installable transcription models, grouped by engine family.
  *
  * Every entry was checked against the engines sona actually implements:
  * Whisper (GGML), Parakeet / Nemotron (GGUF with `general.architecture=parakeet`)
  * and SenseVoice (CTC ONNX export + `tokens.txt`).
  */
-export const MODEL_CATALOG: CatalogModel[] = [
+export const CATALOG_GROUPS: CatalogGroup[] = [
 	{
-		id: 'parakeet-v3-q4',
-		name: 'Parakeet TDT 0.6B v3',
+		id: 'nvidia',
 		engine: 'parakeet',
-		quantization: 'Q4_K_M',
-		sizeMB: 463,
-		languageCount: 25,
-		recommended: true,
-		requiresVad: true,
-		files: [{ url: parakeetV3('parakeet-tdt-0.6b-v3-Q4_K_M.gguf'), filename: 'parakeet-tdt-0.6b-v3-Q4_K_M.gguf' }],
-	},
-	{
-		id: 'nemotron-3.5-q4',
-		name: 'Nemotron 3.5 ASR Streaming 0.6B',
-		engine: 'nemotron',
-		quantization: 'Q4_K_M',
-		sizeMB: 473,
-		languageCount: 32,
-		recommended: true,
-		requiresVad: true,
-		files: [{ url: nemotron('nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf'), filename: 'nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf' }],
-	},
-	{
-		id: 'sensevoice-small',
-		name: 'SenseVoice Small',
-		engine: 'sensevoice',
-		quantization: 'int8',
-		sizeMB: 229,
-		languageCodes: ['zh', 'en', 'ja', 'ko', 'yue'],
-		folder: 'SenseVoiceSmall',
-		files: [
-			{ url: senseVoice('model.int8.onnx'), filename: 'model.int8.onnx' },
-			{ url: senseVoice('tokens.txt'), filename: 'tokens.txt' },
+		name: 'NVIDIA NeMo',
+		hintKey: 'catalogHintNvidia',
+		models: [
+			{
+				id: 'parakeet-v3-q4',
+				name: 'Parakeet TDT 0.6B v3',
+				engine: 'parakeet',
+				quantization: 'Q4_K_M',
+				sizeMB: 463,
+				languageCount: 25,
+				recommended: true,
+				requiresVad: true,
+				files: [{ url: parakeetV3('parakeet-tdt-0.6b-v3-Q4_K_M.gguf'), filename: 'parakeet-tdt-0.6b-v3-Q4_K_M.gguf' }],
+			},
+			{
+				id: 'parakeet-v3-q8',
+				name: 'Parakeet TDT 0.6B v3',
+				engine: 'parakeet',
+				quantization: 'Q8_0',
+				sizeMB: 705,
+				languageCount: 25,
+				requiresVad: true,
+				files: [{ url: parakeetV3('parakeet-tdt-0.6b-v3-Q8_0.gguf'), filename: 'parakeet-tdt-0.6b-v3-Q8_0.gguf' }],
+			},
+			{
+				id: 'nemotron-3.5-q4',
+				name: 'Nemotron 3.5 ASR Streaming 0.6B',
+				engine: 'nemotron',
+				quantization: 'Q4_K_M',
+				sizeMB: 473,
+				languageCount: 32,
+				recommended: true,
+				requiresVad: true,
+				files: [{ url: nemotron('nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf'), filename: 'nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf' }],
+			},
+			{
+				id: 'nemotron-3.5-q8',
+				name: 'Nemotron 3.5 ASR Streaming 0.6B',
+				engine: 'nemotron',
+				quantization: 'Q8_0',
+				sizeMB: 716,
+				languageCount: 32,
+				requiresVad: true,
+				files: [{ url: nemotron('nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf'), filename: 'nemotron-3.5-asr-streaming-0.6b-Q8_0.gguf' }],
+			},
 		],
 	},
 	{
-		id: 'whisper-large-v3-turbo-q5',
-		name: 'Whisper Large v3 Turbo',
+		id: 'whisper',
 		engine: 'whisper',
-		quantization: 'Q5_0',
-		sizeMB: 547,
-		languageCount: 99,
-		recommended: true,
-		files: [{ url: whisperCpp('ggml-large-v3-turbo-q5_0.bin'), filename: 'ggml-large-v3-turbo-q5_0.bin' }],
+		name: 'Whisper',
+		hintKey: 'catalogHintWhisper',
+		models: [
+			{
+				id: 'whisper-large-v3-turbo-q5',
+				name: 'Whisper Large v3 Turbo',
+				engine: 'whisper',
+				quantization: 'Q5_0',
+				sizeMB: 547,
+				languageCount: 99,
+				recommended: true,
+				files: [{ url: whisperCpp('ggml-large-v3-turbo-q5_0.bin'), filename: 'ggml-large-v3-turbo-q5_0.bin' }],
+			},
+			{
+				id: 'whisper-large-v3-turbo',
+				name: 'Whisper Large v3 Turbo',
+				engine: 'whisper',
+				quantization: 'F16',
+				sizeMB: 1549,
+				languageCount: 99,
+				files: [{ url: whisperCpp('ggml-large-v3-turbo.bin'), filename: 'ggml-large-v3-turbo.bin' }],
+			},
+			{
+				id: 'whisper-large-v3',
+				name: 'Whisper Large v3',
+				engine: 'whisper',
+				quantization: 'F16',
+				sizeMB: 2952,
+				languageCount: 99,
+				files: [{ url: whisperCpp('ggml-large-v3.bin'), filename: 'ggml-large-v3.bin' }],
+			},
+			{
+				id: 'whisper-medium-q5',
+				name: 'Whisper Medium',
+				engine: 'whisper',
+				quantization: 'Q5_0',
+				sizeMB: 514,
+				languageCount: 99,
+				files: [{ url: whisperCpp('ggml-medium-q5_0.bin'), filename: 'ggml-medium-q5_0.bin' }],
+			},
+			{
+				id: 'whisper-small-q5',
+				name: 'Whisper Small',
+				engine: 'whisper',
+				quantization: 'Q5_1',
+				sizeMB: 181,
+				languageCount: 99,
+				files: [{ url: whisperCpp('ggml-small-q5_1.bin'), filename: 'ggml-small-q5_1.bin' }],
+			},
+			{
+				id: 'whisper-base-q5',
+				name: 'Whisper Base',
+				engine: 'whisper',
+				quantization: 'Q5_1',
+				sizeMB: 57,
+				languageCount: 99,
+				files: [{ url: whisperCpp('ggml-base-q5_1.bin'), filename: 'ggml-base-q5_1.bin' }],
+			},
+			{
+				id: 'whisper-tiny-q5',
+				name: 'Whisper Tiny',
+				engine: 'whisper',
+				quantization: 'Q5_1',
+				sizeMB: 31,
+				languageCount: 99,
+				files: [{ url: whisperCpp('ggml-tiny-q5_1.bin'), filename: 'ggml-tiny-q5_1.bin' }],
+			},
+		],
 	},
 	{
-		id: 'whisper-large-v3-turbo',
-		name: 'Whisper Large v3 Turbo',
-		engine: 'whisper',
-		quantization: 'F16',
-		sizeMB: 1549,
-		languageCount: 99,
-		files: [{ url: whisperCpp('ggml-large-v3-turbo.bin'), filename: 'ggml-large-v3-turbo.bin' }],
-	},
-	{
-		id: 'whisper-large-v3',
-		name: 'Whisper Large v3',
-		engine: 'whisper',
-		quantization: 'F16',
-		sizeMB: 2952,
-		languageCount: 99,
-		files: [{ url: whisperCpp('ggml-large-v3.bin'), filename: 'ggml-large-v3.bin' }],
-	},
-	{
-		id: 'whisper-medium-q5',
-		name: 'Whisper Medium',
-		engine: 'whisper',
-		quantization: 'Q5_0',
-		sizeMB: 514,
-		languageCount: 99,
-		files: [{ url: whisperCpp('ggml-medium-q5_0.bin'), filename: 'ggml-medium-q5_0.bin' }],
-	},
-	{
-		id: 'whisper-small-q5',
-		name: 'Whisper Small',
-		engine: 'whisper',
-		quantization: 'Q5_1',
-		sizeMB: 181,
-		languageCount: 99,
-		files: [{ url: whisperCpp('ggml-small-q5_1.bin'), filename: 'ggml-small-q5_1.bin' }],
-	},
-	{
-		id: 'whisper-base-q5',
-		name: 'Whisper Base',
-		engine: 'whisper',
-		quantization: 'Q5_1',
-		sizeMB: 57,
-		languageCount: 99,
-		files: [{ url: whisperCpp('ggml-base-q5_1.bin'), filename: 'ggml-base-q5_1.bin' }],
-	},
-	{
-		id: 'whisper-tiny-q5',
-		name: 'Whisper Tiny',
-		engine: 'whisper',
-		quantization: 'Q5_1',
-		sizeMB: 31,
-		languageCount: 99,
-		files: [{ url: whisperCpp('ggml-tiny-q5_1.bin'), filename: 'ggml-tiny-q5_1.bin' }],
+		id: 'sensevoice',
+		engine: 'sensevoice',
+		name: 'SenseVoice',
+		hintKey: 'catalogHintSenseVoice',
+		models: [
+			{
+				id: 'sensevoice-small',
+				name: 'SenseVoice Small',
+				engine: 'sensevoice',
+				quantization: 'int8',
+				sizeMB: 229,
+				languageCodes: ['zh', 'en', 'ja', 'ko', 'yue'],
+				folder: 'SenseVoiceSmall',
+				files: [
+					{ url: senseVoice('model.int8.onnx'), filename: 'model.int8.onnx' },
+					{ url: senseVoice('tokens.txt'), filename: 'tokens.txt' },
+				],
+			},
+		],
 	},
 ]
+
+/** Flat list (used by the setup screen and for "is it installed?" checks). */
+export const MODEL_CATALOG: CatalogModel[] = CATALOG_GROUPS.flatMap((group) => group.models)
 
 /** Helper model needed by Parakeet / Nemotron (and by stable timestamps). */
 export const VAD_MODEL_FILE = 'ggml-silero-v6.2.0.bin'

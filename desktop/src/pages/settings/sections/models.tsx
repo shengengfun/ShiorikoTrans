@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
-import { FolderOpen, PencilLine, Settings2, Trash2 } from 'lucide-react'
+import { ChevronRight, FolderOpen, PencilLine, Settings2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { m } from '~/paraglide/messages.js'
 import { ReactComponent as FolderIcon } from '~/icons/folder.svg'
@@ -14,8 +14,9 @@ import { Progress } from '~/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { SectionCard, type SettingsViewModel } from './shared'
 import { getFriendlyModelName, installCatalogModel, isCatalogModelInstalled } from '~/lib/model'
-import { MODEL_CATALOG, type CatalogModel } from '~/lib/model-catalog'
+import { CATALOG_GROUPS, type CatalogModel } from '~/lib/model-catalog'
 import { detectModelType, MODEL_PIPELINES, type ModelType } from '~/lib/model-pipeline'
+import { cn } from '~/lib/style'
 
 function getModelQuantization(filename: string): string | null {
 	const match = filename.match(/(Q\d+_[A-Z0-9]+|F16|F32|Q4_0|Q5_0|Q8_0)/i)
@@ -40,12 +41,22 @@ function formatSize(sizeMB: number) {
 	return sizeMB >= 1024 ? `${(sizeMB / 1024).toFixed(1)} GB` : `${sizeMB} MB`
 }
 
+/** Group hint messages (key -> i18n message). */
+const GROUP_HINTS: Record<string, () => string> = {
+	catalogHintNvidia: () => m.catalogHintNvidia(),
+	catalogHintWhisper: () => m.catalogHintWhisper(),
+	catalogHintSenseVoice: () => m.catalogHintSenseVoice(),
+}
+
 export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 	const [editingPath, setEditingPath] = useState<string | null>(null)
 	const [editingName, setEditingName] = useState('')
 	const [installingId, setInstallingId] = useState<string | null>(null)
 	const [installProgress, setInstallProgress] = useState(0)
 	const [installed, setInstalled] = useState<Record<string, boolean>>({})
+	// Fold the catalog per engine family; the NVIDIA group (with the recommended
+	// models) starts expanded so the usual choice is one click away.
+	const [expanded, setExpanded] = useState<Record<string, boolean>>({ nvidia: true })
 	const currentModel = vm.models.find((model) => model.path === vm.preference.modelPath)
 
 	// Live progress bar for catalog downloads (the Rust side emits `download_progress`).
@@ -60,7 +71,9 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 	}, [])
 
 	async function refreshInstalled() {
-		const entries = await Promise.all(MODEL_CATALOG.map(async (entry) => [entry.id, await isCatalogModelInstalled(entry)] as const))
+		const entries = await Promise.all(
+			CATALOG_GROUPS.flatMap((group) => group.models).map(async (entry) => [entry.id, await isCatalogModelInstalled(entry)] as const),
+		)
 		setInstalled(Object.fromEntries(entries))
 	}
 
@@ -95,41 +108,71 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 						<Label>{m.modelCatalog()}</Label>
 						<p className="text-xs text-muted-foreground">{m.modelCatalogInfo()}</p>
 					</div>
-					<div className="divide-y divide-border/45 overflow-hidden rounded-xl border border-border/55">
-						{MODEL_CATALOG.map((entry) => {
-							const isInstalled = installed[entry.id] === true
-							const busy = installingId === entry.id
+					<div className="space-y-2">
+						{CATALOG_GROUPS.map((group) => {
+							const open = expanded[group.id] ?? false
 							return (
-								<div key={entry.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-									<div className="min-w-0 flex-1">
-										<div className="flex flex-wrap items-center gap-1.5">
-											<span className="truncate text-sm font-medium">{entry.name}</span>
-											{entry.quantization && (
-												<span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{entry.quantization}</span>
-											)}
-											{entry.recommended && (
-												<span className="rounded bg-primary/12 px-1.5 py-0.5 text-[10px] font-medium text-primary">{m.recommended()}</span>
-											)}
-										</div>
-										<div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-											<span className={engineBadge(entry.engine)}>{entry.engine}</span>
-											<span>
-												{entry.languageCount != null
-													? m.languagesCount({ count: String(entry.languageCount) })
-													: (entry.languageCodes ?? []).join(' · ')}
+								<div key={group.id} className="overflow-hidden rounded-xl border border-border/55">
+									<button
+										type="button"
+										onClick={() => setExpanded((prev) => ({ ...prev, [group.id]: !open }))}
+										className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/40">
+										<ChevronRight className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')} />
+										<span className="min-w-0 flex-1">
+											<span className="flex flex-wrap items-center gap-2">
+												<span className="truncate text-sm font-medium">{group.name}</span>
+												<span className={engineBadge(group.engine)}>{group.engine}</span>
+												<span className="text-[11px] text-muted-foreground">
+													{group.models.length} · {group.models.some((model) => installed[model.id]) ? m.installed() : ''}
+												</span>
 											</span>
-											<span>{formatSize(entry.sizeMB)}</span>
-											{entry.requiresVad && <span>{m.needsVadModel()}</span>}
+											<span className="mt-0.5 block text-[11px] text-muted-foreground">
+												{(GROUP_HINTS[group.hintKey] ?? (() => ''))()}
+											</span>
+										</span>
+									</button>
+									{open && (
+										<div className="divide-y divide-border/45 border-t border-border/45">
+											{group.models.map((entry) => {
+												const isInstalled = installed[entry.id] === true
+												const busy = installingId === entry.id
+												return (
+													<div key={entry.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+														<div className="min-w-0 flex-1">
+															<div className="flex flex-wrap items-center gap-1.5 ps-6">
+																<span className="truncate text-sm font-medium">{entry.name}</span>
+																{entry.quantization && (
+																	<span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+																		{entry.quantization}
+																	</span>
+																)}
+																{entry.recommended && (
+																	<span className="rounded bg-primary/12 px-1.5 py-0.5 text-[10px] font-medium text-primary">{m.recommended()}</span>
+																)}
+															</div>
+															<div className="mt-1 flex flex-wrap items-center gap-2 ps-6 text-[11px] text-muted-foreground">
+																<span>
+																	{entry.languageCount != null
+																		? m.languagesCount({ count: String(entry.languageCount) })
+																		: (entry.languageCodes ?? []).join(' · ')}
+																</span>
+																<span>{formatSize(entry.sizeMB)}</span>
+																{entry.requiresVad && <span>{m.needsVadModel()}</span>}
+															</div>
+															{busy && <Progress className="mt-2 h-1.5 ps-6" value={installProgress} />}
+														</div>
+														<Button
+															size="sm"
+															variant={isInstalled ? 'ghost' : 'default'}
+															disabled={busy || installingId !== null}
+															onClick={() => install(entry)}>
+															{busy ? m.downloadingModel() : isInstalled ? m.installed() : m.download()}
+														</Button>
+													</div>
+												)
+											})}
 										</div>
-										{busy && <Progress className="mt-2 h-1.5" value={installProgress} />}
-									</div>
-									<Button
-										size="sm"
-										variant={isInstalled ? 'ghost' : 'default'}
-										disabled={busy || installingId !== null}
-										onClick={() => install(entry)}>
-										{busy ? m.downloadingModel() : isInstalled ? m.installed() : m.download()}
-									</Button>
+									)}
 								</div>
 							)
 						})}

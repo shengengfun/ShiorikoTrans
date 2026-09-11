@@ -4,11 +4,20 @@ export interface ModelPipeline {
 	type: ModelType
 	engine: string
 	supportsGpu: boolean
+	/** The engine cannot run at all without the Silero VAD helper model. */
+	requiresVad: boolean
+	/** VAD can be used for stable timestamps (separate from `requiresVad`). */
 	supportsVad: boolean
 	supportsDiarization: boolean
 	supportsStreaming: boolean
 	supportsTranslation: boolean
 	supportsWordTimestamps: boolean
+	/** Decoding parameters — engines reject options they don't understand, so
+	 * every option passed to sona must be filtered through these flags. */
+	supportsPrompt: boolean
+	supportsTemperature: boolean
+	supportsSampling: boolean
+	supportsMaxTextCtx: boolean
 	defaultThreads: number
 	defaultTemperature: number
 }
@@ -18,11 +27,16 @@ export const MODEL_PIPELINES: Record<ModelType, ModelPipeline> = {
 		type: 'whisper',
 		engine: 'whisper',
 		supportsGpu: true,
+		requiresVad: false,
 		supportsVad: true,
 		supportsDiarization: true,
 		supportsStreaming: true,
 		supportsTranslation: true,
 		supportsWordTimestamps: true,
+		supportsPrompt: true,
+		supportsTemperature: true,
+		supportsSampling: true,
+		supportsMaxTextCtx: true,
 		defaultThreads: 4,
 		defaultTemperature: 0.0,
 	},
@@ -30,11 +44,16 @@ export const MODEL_PIPELINES: Record<ModelType, ModelPipeline> = {
 		type: 'nemotron',
 		engine: 'nemotron',
 		supportsGpu: true,
+		requiresVad: true,
 		supportsVad: false,
 		supportsDiarization: true,
-		supportsStreaming: false,
+		supportsStreaming: true,
 		supportsTranslation: false,
 		supportsWordTimestamps: false,
+		supportsPrompt: false,
+		supportsTemperature: true,
+		supportsSampling: false,
+		supportsMaxTextCtx: false,
 		defaultThreads: 4,
 		defaultTemperature: 0.7,
 	},
@@ -43,13 +62,16 @@ export const MODEL_PIPELINES: Record<ModelType, ModelPipeline> = {
 		engine: 'parakeet',
 		// NVIDIA Parakeet TDT / Nemotron RNNT GGUF (multilingual, needs Silero VAD).
 		supportsGpu: true,
-		// The engine itself segments with VAD; the "stable timestamps" switch
-		// would just download another copy of the same helper model.
+		requiresVad: true,
 		supportsVad: false,
 		supportsDiarization: false,
 		supportsStreaming: true,
 		supportsTranslation: false,
 		supportsWordTimestamps: false,
+		supportsPrompt: false,
+		supportsTemperature: false,
+		supportsSampling: false,
+		supportsMaxTextCtx: false,
 		defaultThreads: 4,
 		defaultTemperature: 0.0,
 	},
@@ -58,11 +80,16 @@ export const MODEL_PIPELINES: Record<ModelType, ModelPipeline> = {
 		engine: 'sensevoice',
 		// GPU via ONNX Runtime DirectML (D3D12); falls back to CPU automatically.
 		supportsGpu: true,
+		requiresVad: false,
 		supportsVad: false,
 		supportsDiarization: false,
 		supportsStreaming: false,
 		supportsTranslation: false,
 		supportsWordTimestamps: false,
+		supportsPrompt: false,
+		supportsTemperature: false,
+		supportsSampling: false,
+		supportsMaxTextCtx: false,
 		defaultThreads: 4,
 		defaultTemperature: 0.0,
 	},
@@ -72,11 +99,16 @@ export const MODEL_PIPELINES: Record<ModelType, ModelPipeline> = {
 		// Tencent Hunyuan-Audio: Qwen2-7B + whisper-large-v3 encoder + adapter.
 		// Dedicated Rust engine not implemented yet; recognized for download/planning.
 		supportsGpu: true,
+		requiresVad: false,
 		supportsVad: false,
 		supportsDiarization: false,
 		supportsStreaming: false,
 		supportsTranslation: false,
 		supportsWordTimestamps: false,
+		supportsPrompt: false,
+		supportsTemperature: false,
+		supportsSampling: false,
+		supportsMaxTextCtx: false,
 		defaultThreads: 4,
 		defaultTemperature: 0.0,
 	},
@@ -84,11 +116,16 @@ export const MODEL_PIPELINES: Record<ModelType, ModelPipeline> = {
 		type: 'custom',
 		engine: 'auto',
 		supportsGpu: true,
+		requiresVad: false,
 		supportsVad: true,
 		supportsDiarization: true,
 		supportsStreaming: true,
 		supportsTranslation: true,
 		supportsWordTimestamps: true,
+		supportsPrompt: true,
+		supportsTemperature: true,
+		supportsSampling: true,
+		supportsMaxTextCtx: true,
 		defaultThreads: 4,
 		defaultTemperature: 0.0,
 	},

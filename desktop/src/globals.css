@@ -8,6 +8,37 @@ html.dictation-indicator-window #root {
 	overflow: hidden;
 }
 
+/* Accent colour sliders (hue / saturation / lightness) — the track gradient and
+   the thumb colour are set inline; only the geometry lives here. */
+.color-slider {
+	appearance: none;
+	width: 100%;
+	height: 10px;
+	border-radius: 9999px;
+	border: 1px solid var(--border);
+	outline: none;
+	cursor: pointer;
+}
+.color-slider::-webkit-slider-thumb {
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	border-radius: 9999px;
+	background-color: currentColor;
+	border: 2px solid hsl(0 0% 100% / 0.92);
+	box-shadow: 0 1px 4px hsl(0 0% 0% / 0.35);
+	cursor: grab;
+}
+.color-slider::-moz-range-thumb {
+	width: 16px;
+	height: 16px;
+	border-radius: 9999px;
+	background-color: currentColor;
+	border: 2px solid hsl(0 0% 100% / 0.92);
+	box-shadow: 0 1px 4px hsl(0 0% 0% / 0.35);
+	cursor: grab;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

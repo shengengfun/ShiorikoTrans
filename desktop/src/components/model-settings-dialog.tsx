@@ -65,10 +65,9 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 	const name = entry ? modelDisplayName(entry, preference.modelDisplayNames) : path ? modelNameFromPath(path) : m.selectModel()
 	const options = preference.modelOptions
 	const setOptions = preference.setModelOptions
-	const isWhisper = pipeline.type === 'whisper' || pipeline.type === 'custom'
-	// SenseVoice / Hunyuan / Parakeet / Nemotron expose no decoding parameters.
-	const showParams = pipeline.type !== 'sensevoice' && pipeline.type !== 'hunyuan' && pipeline.type !== 'parakeet'
-	const usesVad = pipeline.type === 'parakeet' || pipeline.type === 'nemotron'
+	// Menus are generated from the engine descriptor, so a new engine only needs
+	// its capability flags in `model-pipeline.ts`.
+	const hasDecodingParams = pipeline.supportsTemperature || pipeline.supportsMaxTextCtx || pipeline.supportsWordTimestamps
 
 	async function revealModel() {
 		if (path) await invoke('open_path', { path })
@@ -109,7 +108,7 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 							</Button>
 						</div>
 
-						{showParams && (
+						{hasDecodingParams && (
 							<>
 								<div className="space-y-3">
 									<span className="px-1 text-sm font-semibold text-foreground/95">{m.modelOptions()}</span>
@@ -125,19 +124,21 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 												onChange={(event) => setOptions({ ...options, n_threads: parseIntOr(event.target.value, 1) })}
 											/>
 										</div>
-										<div className="space-y-2">
-											<Label className="flex items-center gap-1">
-												<InfoTooltip text={m.infoTemperature()} />
-												{m.temperature()}
-											</Label>
-											<Input
-												type="number"
-												step={0.1}
-												value={options.temperature}
-												onChange={(event) => setOptions({ ...options, temperature: parseFloat(event.target.value) || 0 })}
-											/>
-										</div>
-										{isWhisper && (
+										{pipeline.supportsTemperature && (
+											<div className="space-y-2">
+												<Label className="flex items-center gap-1">
+													<InfoTooltip text={m.infoTemperature()} />
+													{m.temperature()}
+												</Label>
+												<Input
+													type="number"
+													step={0.1}
+													value={options.temperature}
+													onChange={(event) => setOptions({ ...options, temperature: parseFloat(event.target.value) || 0 })}
+												/>
+											</div>
+										)}
+										{pipeline.supportsMaxTextCtx && (
 											<div className="space-y-2">
 												<Label className="flex items-center gap-1">
 													<InfoTooltip text={m.infoMaxTextCtx()} />
@@ -210,8 +211,9 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 									</div>
 								)}
 
-								<div className="space-y-3">
-									<span className="px-1 text-sm font-semibold text-foreground/95">{m.samplingStrategy()}</span>
+								{pipeline.supportsSampling && (
+									<div className="space-y-3">
+										<span className="px-1 text-sm font-semibold text-foreground/95">{m.samplingStrategy()}</span>
 									<div className="grid grid-cols-2 gap-4 rounded-xl border border-border/60 p-4">
 										<div className="space-y-2">
 											<Label className="flex items-center gap-1">
@@ -248,21 +250,24 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 										</div>
 									</div>
 								</div>
+								)}
 
-								<div className="space-y-3">
-									<span className="px-1 text-sm font-semibold text-foreground/95">{m.prompt()}</span>
-									<div className="space-y-2 rounded-xl border border-border/60 p-4">
-										<Label className="flex items-center gap-1">
-											<InfoTooltip text={m.infoPrompt()} />
-											{m.prompt()} ({m.leftover()} {1024 - (options?.init_prompt?.length ?? 0)} {m.characters()})
-										</Label>
-										<Textarea
-											value={options?.init_prompt}
-											onChange={(event) => setOptions({ ...options, init_prompt: event.target.value.slice(0, 1024) })}
-											className="min-h-[80px]"
-										/>
+								{pipeline.supportsPrompt && (
+									<div className="space-y-3">
+										<span className="px-1 text-sm font-semibold text-foreground/95">{m.prompt()}</span>
+										<div className="space-y-2 rounded-xl border border-border/60 p-4">
+											<Label className="flex items-center gap-1">
+												<InfoTooltip text={m.infoPrompt()} />
+												{m.prompt()} ({m.leftover()} {1024 - (options?.init_prompt?.length ?? 0)} {m.characters()})
+											</Label>
+											<Textarea
+												value={options?.init_prompt}
+												onChange={(event) => setOptions({ ...options, init_prompt: event.target.value.slice(0, 1024) })}
+												className="min-h-[80px]"
+											/>
+										</div>
 									</div>
-								</div>
+								)}
 							</>
 						)}
 
@@ -324,13 +329,13 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 							</div>
 						</div>
 
-						{!showParams && (
+						{!hasDecodingParams && (
 							<p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
 								{m.modelSettingsNoOptions()} ({pipeline.engine})
 							</p>
 						)}
 
-						{usesVad && (
+						{pipeline.requiresVad && (
 							<p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{m.needsVadModel()}</p>
 						)}
 					</div>

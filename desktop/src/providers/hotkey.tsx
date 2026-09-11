@@ -10,8 +10,7 @@ import * as transcript from '~/lib/transcript'
 import { usePreferenceProvider } from '~/providers/preference'
 import { m } from '~/paraglide/messages.js'
 import { hideDictationIndicator, showDictationIndicator } from '~/lib/dictation-indicator'
-import { resolveAuxModelPath } from '~/lib/model-paths'
-import * as config from '~/lib/config'
+import { prepareTranscribeOptions } from '~/lib/transcribe-options'
 
 // Module-level flag used by home viewModel to skip processing
 // when hotkey-triggered recording finishes
@@ -187,13 +186,16 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
 			if (loadResult === 'gpu_fallback') {
 				await notify('shiorikotrans', m.gpuFallbackToCpu())
 			}
-				const requiresVad = preferenceRef.current.modelMetadata?.capabilities.requires_vad ?? false
-				const modelsFolder = requiresVad ? await invoke<string>('get_models_folder') : null
-				const options = {
+				const { options } = await prepareTranscribeOptions({
 					path,
-					...preferenceRef.current.modelOptions,
-					...(requiresVad && modelsFolder ? { vad_model: await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename) } : {}),
-				}
+					modelPath,
+					modelMetadata: preferenceRef.current.modelMetadata,
+					modelOptions: preferenceRef.current.modelOptions,
+					// Dictation stays lean: no diarization / stable timestamps, but the
+					// engine-specific VAD model is still attached when required.
+					diarizeEnabled: false,
+					stableTimestampsEnabled: false,
+				})
 				const res: transcript.Transcript = await invoke('transcribe', { options })
 				let resultText = transcript.asText(res.segments, m.speakerPrefix())
 
