@@ -333,5 +333,6 @@
 	"customColorHint": "拖动滑块或输入色号",
 	"catalogHintNvidia": "0.6B TDT / RNNT 架构，速度快、多语言；需要 VAD 辅助模型（自动下载）",
 	"catalogHintWhisper": "99 种语言，兼容性最好；大模型更准，小模型更快",
-	"catalogHintSenseVoice": "中文 / 英文 / 粤语 / 日语 / 韩语，CTC 非自回归，推理极快"
+	"catalogHintSenseVoice": "中文 / 英文 / 粤语 / 日语 / 韩语，CTC 非自回归，推理极快",
+	"modelsCount": "{count} 个型号"
 }

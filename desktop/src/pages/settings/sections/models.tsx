@@ -14,7 +14,7 @@ import { Progress } from '~/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { SectionCard, type SettingsViewModel } from './shared'
 import { getFriendlyModelName, installCatalogModel, isCatalogModelInstalled } from '~/lib/model'
-import { CATALOG_GROUPS, type CatalogModel } from '~/lib/model-catalog'
+import { CATALOG_GROUPS, type CatalogGroup, type CatalogModel } from '~/lib/model-catalog'
 import { detectModelType, MODEL_PIPELINES, type ModelType } from '~/lib/model-pipeline'
 import { cn } from '~/lib/style'
 
@@ -46,6 +46,11 @@ const GROUP_HINTS: Record<string, () => string> = {
 	catalogHintNvidia: () => m.catalogHintNvidia(),
 	catalogHintWhisper: () => m.catalogHintWhisper(),
 	catalogHintSenseVoice: () => m.catalogHintSenseVoice(),
+}
+
+/** Every engine present in a group, e.g. `parakeet / nemotron`. */
+function enginesOf(group: CatalogGroup) {
+	return [...new Set(group.models.map((model) => model.engine))].join(' / ')
 }
 
 export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
@@ -111,6 +116,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 					<div className="space-y-2">
 						{CATALOG_GROUPS.map((group) => {
 							const open = expanded[group.id] ?? false
+							const installedCount = group.models.filter((model) => installed[model.id]).length
 							return (
 								<div key={group.id} className="overflow-hidden rounded-xl border border-border/55">
 									<button
@@ -121,9 +127,11 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 										<span className="min-w-0 flex-1">
 											<span className="flex flex-wrap items-center gap-2">
 												<span className="truncate text-sm font-medium">{group.name}</span>
-												<span className={engineBadge(group.engine)}>{group.engine}</span>
+												<span className={engineBadge(group.engine)}>{enginesOf(group)}</span>
 												<span className="text-[11px] text-muted-foreground">
-													{group.models.length} · {group.models.some((model) => installed[model.id]) ? m.installed() : ''}
+													{installedCount > 0
+														? `${installedCount}/${group.models.length} ${m.installed()}`
+														: m.modelsCount({ count: String(group.models.length) })}
 												</span>
 											</span>
 											<span className="mt-0.5 block text-[11px] text-muted-foreground">

@@ -437,5 +437,6 @@
 	"customColorHint": "Drag the sliders or type a hex value",
 	"catalogHintNvidia": "0.6B TDT / RNNT models — fast and multilingual (needs the VAD helper model, downloaded automatically)",
 	"catalogHintWhisper": "99 languages, best compatibility — large for accuracy, tiny for speed",
-	"catalogHintSenseVoice": "Chinese / English / Cantonese / Japanese / Korean, non-autoregressive CTC, extremely fast"
+	"catalogHintSenseVoice": "Chinese / English / Cantonese / Japanese / Korean, non-autoregressive CTC, extremely fast",
+	"modelsCount": "{count} models"
 }
