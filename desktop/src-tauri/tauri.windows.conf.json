@@ -1,6 +1,11 @@
 {
 	"bundle": {
 		"externalBin": ["binaries/sona", "binaries/ffmpeg"],
+		"resources": {
+			"binaries/onnxruntime.dll": "onnxruntime.dll",
+			"binaries/onnxruntime_providers_shared.dll": "onnxruntime_providers_shared.dll",
+			"binaries/DirectML.dll": "DirectML.dll"
+		},
 		"windows": {
 			"nsis": {
 				"installerHooks": "vc_redist.nsh"

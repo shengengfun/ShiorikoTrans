@@ -57,6 +57,9 @@ FunAudioLLM SenseVoice Small 的 ONNX CTC 导出，支持中文 / 英文 / 粤�
 [🔽 tokens.txt](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/tokens.txt?download=true)
 
 > 以上模型均可在 **设置 → 模型 → 模型目录** 里一键下载（含 VAD 辅助模型），无需手动放文件。
+>
+> ⚠️ SenseVoice 由 `sona` 的 `sensevoice-rs`（ONNX Runtime）引擎运行，Windows 安装包已附带 `onnxruntime.dll` / `DirectML.dll`；
+> 若使用上游预编译的 `sona` 二进制（不含该引擎），SenseVoice 不可用，其余模型不受影响。
 
 ### Models optimised for other languages
 

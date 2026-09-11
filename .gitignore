@@ -35,8 +35,13 @@ desktop/src-tauri/binaries/sona-*
 github-issues/
 dedup_report.json
 ISSUES-REPORT.md
-desktop/src-tauri/binaries/
+desktop/src-tauri/binaries/*
 !desktop/src-tauri/binaries/.gitkeep
+# ONNX Runtime libraries shipped next to the sona sidecar (SenseVoice engine).
+# They are bundled on Windows through bundle.resources in tauri.windows.conf.json.
+!desktop/src-tauri/binaries/onnxruntime.dll
+!desktop/src-tauri/binaries/onnxruntime_providers_shared.dll
+!desktop/src-tauri/binaries/DirectML.dll
 *.csv
 /sona/
 whisper.cpp/
