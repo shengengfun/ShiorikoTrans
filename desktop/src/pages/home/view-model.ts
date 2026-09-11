@@ -6,18 +6,13 @@ import { useEffect, useState } from 'react'
 import { m } from '~/paraglide/messages.js'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TextFormat } from '~/components/format-select'
-import * as transcript from '~/lib/transcript'
-import { useConfirmExit } from '~/lib/use-confirm-exit'
 import { NamedPath } from '~/lib/types'
 import { ls, pathToNamedPath } from '~/lib/fs'
 import { openPath } from '~/lib/app'
 import { ModelOptions, usePreferenceProvider } from '~/providers/preference'
-import { hotkeyRecordingActive } from '~/providers/hotkey'
-import { useSummarization } from './hooks/use-summarization'
-import { useRecording } from './hooks/use-recording'
+import { useTranscriptionProvider } from '~/providers/transcription'
 import { useAudioDownload } from './hooks/use-audio-download'
 import { useMediaSelection } from './hooks/use-media-selection'
-import { useTranscription } from './hooks/use-transcription'
 import { isTranscriptionModelFile, findModelFilesInDir } from '~/lib/model'
 import { isNonTranscribeSubdir } from '~/lib/model-paths'
 
@@ -31,40 +26,11 @@ export function viewModel() {
 	const location = useLocation()
 	const [settingsVisible, setSettingsVisible] = useState(location.hash === '#settings')
 	const navigate = useNavigate()
-	const {
-		segments: summarizeSegments,
-		setSegments: setSummarizeSegments,
-		summarizing,
-		transcriptTab,
-		setTranscriptTab,
-		summarize,
-	} = useSummarization()
-	const { loading, isAborting, segments, setSegments, translatedSegments, setTranslatedSegments, progress, setProgress, transcribe, onAbort } = useTranscription({
-		onResetSummary: () => {
-			setSummarizeSegments(null)
-			setTranscriptTab('transcript')
-		},
-		onSummarize: summarize,
-	})
-	const {
-		devices,
-		setDevices,
-		inputDevice,
-		setInputDevice,
-		outputDevice,
-		setOutputDevice,
-		isRecording,
-		setIsRecording,
-		recordingName,
-		setRecordingName,
-		startRecord,
-		stopRecord,
-	} = useRecording(() => {
-		setSegments(null)
-		setSummarizeSegments(null)
-		setTranscriptTab('transcript')
-	})
-	useConfirmExit((segments?.length ?? 0) > 0 || loading)
+
+	// Transcription / summary / recording state lives in a provider above the
+	// router, so switching pages (or opening settings) no longer discards a
+	// running transcription.
+	const session = useTranscriptionProvider()
 
 	const {
 		files, setFiles, audio, setAudio, selectedFolder, setSelectedFolder, isCollectingFolder,
@@ -74,7 +40,14 @@ export function viewModel() {
 	const {
 		cancelYtDlpRef, cancelYtDlpDownload, ytdlpProgress, setYtDlpProgress, switchToLinkTab,
 		audioUrl, setAudioUrl, downloadAudio, downloadingAudio, setDownloadingAudio,
-	} = useAudioDownload(transcribe)
+	} = useAudioDownload(session.transcribe)
+
+	// Clear the folder selection when a recording finishes (the corresponding
+	// listener now lives in the provider).
+	useEffect(() => {
+		session.registerRecordFinishHook(() => setSelectedFolder(null))
+		return () => session.registerRecordFinishHook(null)
+	}, [])
 
 
 	async function checkIfCrashedRecently() {
@@ -92,34 +65,12 @@ export function viewModel() {
 
 
 
-	function setupEventListeners(): (() => void) {
+	// Transcription progress / segments and `record_finish` are handled by
+	// TranscriptionProvider (they must survive page navigation); only
+	// page-specific listeners stay here.
+	function setupEventListeners(): () => void {
 		const unlisteners: Promise<() => void>[] = []
 
-		unlisteners.push(
-			listen('transcribe_progress', (event) => {
-				const value = event.payload as number
-				if (value >= 0 && value <= 100) {
-					setProgress(value)
-				}
-			})
-		)
-		unlisteners.push(
-			listen<transcript.Segment>('new_segment', (event) => {
-				const { payload } = event
-				setSegments((prev) => (prev ? [...prev, payload] : [payload]))
-			})
-		)
-		unlisteners.push(
-			listen<{ path: string; name: string }>('record_finish', (event) => {
-				if (hotkeyRecordingActive) return
-				const { name, path } = event.payload
-				setSelectedFolder(null)
-				preference.setHomeTab("file")
-				setFiles([{ name, path }])
-				setIsRecording(false)
-				transcribe(path)
-			})
-		)
 		unlisteners.push(
 			listen<{ paths: string[] }>('tauri://drag-drop', async (event) => {
 				setSelectedFolder(null)
@@ -135,9 +86,7 @@ export function viewModel() {
 			})
 		)
 
-		return () => {
-			unlisteners.forEach((p) => p.then((fn) => fn()))
-		}
+		return () => unlisteners.forEach((p) => p.then((fn) => fn()))
 	}
 
 
@@ -193,31 +142,15 @@ export function viewModel() {
 
 
 	async function resummarize(prompt: string) {
-		if (segments) await summarize(segments, prompt, true)
+		if (session.segments) await session.summarize(session.segments, prompt, true)
 	}
 
-
 	return {
+		...session,
 		cancelYtDlpRef,
 		cancelYtDlpDownload,
 		ytdlpProgress,
 		setYtDlpProgress,
-		transcriptTab,
-		setTranscriptTab,
-		summarizeSegments,
-		setSummarizeSegments,
-		devices,
-		setDevices,
-		inputDevice,
-		setInputDevice,
-		outputDevice,
-		setOutputDevice,
-		isRecording,
-		setIsRecording,
-		recordingName,
-		setRecordingName,
-		startRecord,
-		stopRecord,
 		preference: preference,
 		openPath,
 		selectFiles,
@@ -225,22 +158,14 @@ export function viewModel() {
 		startFolderBatch,
 		clearFolderSelection,
 		selectedFolder,
+		setSelectedFolder,
 		isCollectingFolder,
-		isAborting,
 		settingsVisible,
 		setSettingsVisible,
-		loading,
-		progress,
 		audio,
 		setAudio,
 		files,
 		setFiles,
-		segments,
-		setSegments,
-		translatedSegments,
-		setTranslatedSegments,
-		transcribe,
-		onAbort,
 		switchToLinkTab,
 		audioUrl,
 		setAudioUrl,
@@ -248,6 +173,5 @@ export function viewModel() {
 		downloadingAudio,
 		setDownloadingAudio,
 		resummarize,
-		summarizing,
 	}
 }

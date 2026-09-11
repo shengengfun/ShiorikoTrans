@@ -8,6 +8,11 @@ export function openSettingsSection(scrollTo: string) {
 	window.dispatchEvent(new CustomEvent('shiorikotrans:open-settings', { detail: { scrollTo } }))
 }
 
+/** Open the dedicated model settings dialog (per-engine options). */
+export function openModelSettings(modelPath?: string | null) {
+	window.dispatchEvent(new CustomEvent('shiorikotrans:open-model-settings', { detail: { modelPath } }))
+}
+
 export async function resetApp() {
 	const modelPath = localStorage.getItem('model_path')
 	try {

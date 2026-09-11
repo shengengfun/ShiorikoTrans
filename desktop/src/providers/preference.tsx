@@ -12,7 +12,7 @@ import { defaultOllamaConfig, LlmConfig } from '~/lib/llm'
 import { message } from '@tauri-apps/plugin-dialog'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { ModelMetadata } from '~/lib/model'
-import { getModelPipeline, ModelPipeline, ModelType } from '~/lib/model-pipeline'
+import { getModelPipeline, getModelPipelineFromPath, ModelPipeline, ModelType } from '~/lib/model-pipeline'
 
 type Direction = 'ltr' | 'rtl'
 export type HomeTab = 'record' | 'file' | 'link'
@@ -254,8 +254,7 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 			setModelPipeline(getModelPipeline(''))
 			return
 		}
-		const filename = modelPath.split(/[\\/]/).pop() || ''
-		const pipeline = getModelPipeline(filename)
+		const pipeline = getModelPipelineFromPath(modelPath)
 		setModelType(pipeline.type)
 		setModelPipeline(pipeline)
 	}, [modelPath])

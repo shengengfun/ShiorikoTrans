@@ -7,10 +7,8 @@ import { Bot, History, Languages, ListVideo, Minus, Settings2, Square, X } from 
 import { m } from '~/paraglide/messages.js'
 import { usePreferenceProvider, type RecentFile } from '~/providers/preference'
 import { useFilesContext } from '~/providers/files-provider'
-import { getFriendlyModelName, isTranscriptionModelFile, findModelFilesInDir } from '~/lib/model'
-import { isNonTranscribeSubdir } from '~/lib/model-paths'
-import { ls } from '~/lib/fs'
-import { invoke } from '@tauri-apps/api/core'
+import { modelDisplayName, modelNameFromPath, useTranscriptionModels, type ModelEntry } from '~/lib/model-list'
+import { openModelSettings } from '~/lib/app'
 import { cn } from '~/lib/style'
 import { Button } from './ui/button'
 import {
@@ -85,35 +83,15 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 	}
 
 	// Load available transcription models for the quick-switcher in the title bar
-	useEffect(() => {
-		let cancelled = false
-		;(async () => {
-			try {
-				const root = await invoke<string>('get_models_folder')
-				const entries = await ls(root)
-				const list: { name: string; path: string }[] = []
-				for (const entry of entries) {
-					if (entry.is_dir) {
-						if (isNonTranscribeSubdir(entry.name)) continue
-						const files = await findModelFilesInDir(entry.path)
-						for (const f of files) list.push(f)
-					} else if (isTranscriptionModelFile(entry.name)) {
-						list.push({ name: entry.name, path: entry.path })
-					}
-				}
-				if (!cancelled) setModels(list)
-			} catch {
-				/* ignore in non-Tauri contexts */
-			}
-		})()
-		return () => {
-			cancelled = true
-		}
-	}, [])
+	const { models } = useTranscriptionModels(prefs.modelPath)
 
-	const modelBase = prefs.modelPath?.split(/[\\/]/).pop() || ''
-	const modelLabel = modelBase ? getFriendlyModelName(modelBase) : m.selectModel()
-	const [models, setModels] = useState<{ name: string; path: string }[]>([])
+	const displayName = (entry: ModelEntry) => modelDisplayName(entry, prefs.modelDisplayNames)
+	const currentModel = models.find((entry) => entry.path === prefs.modelPath)
+	const modelLabel = currentModel
+		? displayName(currentModel)
+		: prefs.modelPath
+			? prefs.modelDisplayNames[prefs.modelPath] ?? modelNameFromPath(prefs.modelPath)
+			: m.selectModel()
 	const recent = [...prefs.recentFiles].sort((a, b) => b.ts - a.ts)
 
 	return (
@@ -217,11 +195,28 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 									<DropdownMenuItem
 										key={mdl.path}
 										onClick={() => prefs.setModelPath(mdl.path)}
-										className={cn(
-											'flex h-9 items-center gap-2 rounded-md px-2.5 text-sm',
-											active && 'bg-primary/10 text-primary',
-										)}>
-										<span className="truncate">{getFriendlyModelName(mdl.name)}</span>
+										className={cn('flex h-9 items-center gap-2 rounded-md px-2.5 text-sm', active && 'bg-primary/10 text-primary')}>
+										<span className="min-w-0 flex-1 truncate" title={mdl.path}>
+											{displayName(mdl)}
+										</span>
+										{mdl.is_dir && mdl.file && (
+											<span className="max-w-28 shrink-0 truncate font-mono text-[10px] text-muted-foreground" title={mdl.file}>
+												{mdl.file}
+											</span>
+										)}
+										<button
+											type="button"
+											aria-label={m.modelSettings()}
+											title={m.modelSettings()}
+											onPointerDown={(event) => event.stopPropagation()}
+											onClick={(event) => {
+												event.stopPropagation()
+												prefs.setModelPath(mdl.path)
+												openModelSettings(mdl.path)
+											}}
+											className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+											<Settings2 className="h-3.5 w-3.5" />
+										</button>
 									</DropdownMenuItem>
 								)
 							})}

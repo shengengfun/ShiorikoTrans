@@ -1,18 +1,6 @@
 import { ReactNode, useState } from 'react'
 import { m } from '~/paraglide/messages.js'
-import {
-	Bot,
-	Cpu,
-	Globe,
-	Mic,
-	Palette,
-	ShieldCheck,
-	SlidersHorizontal,
-	Sparkles,
-	Terminal,
-	Wrench,
-	X,
-} from 'lucide-react'
+import { Bot, Globe, Mic, Palette, SlidersHorizontal, Sparkles, Terminal, Wrench, X } from 'lucide-react'
 import { ModifyState } from '~/lib/types'
 import { viewModel } from './view-model'
 import { Button } from '~/components/ui/button'
@@ -23,17 +11,15 @@ import { DictationSection } from './sections/dictation'
 import { GeneralSection } from './sections/general'
 import { GpuSection } from './sections/gpu'
 import { ModelsSection } from './sections/models'
-import { PrivacySection } from './sections/privacy'
 import { SummarizeSection } from './sections/summarize'
 import { TranscriptionSection } from './sections/transcription'
-import { TuningSection } from './sections/tuning'
 
 interface SettingsPageProps {
 	setVisible: ModifyState<boolean>
 	scrollTo?: string
 }
 
-type SectionId = 'general' | 'appearance' | 'transcription' | 'models' | 'summarize' | 'tuning' | 'dictation' | 'api' | 'privacy' | 'advanced' | 'gpu'
+type SectionId = 'general' | 'appearance' | 'transcription' | 'models' | 'summarize' | 'dictation' | 'api' | 'advanced' | 'gpu'
 
 interface SettingsSection {
 	id: SectionId
@@ -52,17 +38,13 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 	const groups: SettingsGroup[] = [
 		{
 			label: m.general(),
-			sections: [
-				{ id: 'general', label: m.general(), icon: <Globe className="h-4 w-4" /> },
-				{ id: 'privacy', label: m.privacy(), icon: <ShieldCheck className="h-4 w-4" /> },
-			],
+			sections: [{ id: 'general', label: m.general(), icon: <Globe className="h-4 w-4" /> }],
 		},
 		{
 			label: m.transcription(),
 			sections: [
 				{ id: 'transcription', label: m.transcription(), icon: <SlidersHorizontal className="h-4 w-4" /> },
 				{ id: 'models', label: m.selectModel(), icon: <Bot className="h-4 w-4" /> },
-				{ id: 'tuning', label: m.fineTuning(), icon: <Cpu className="h-4 w-4" /> },
 			],
 		},
 		{
@@ -148,13 +130,9 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 
 					{activeSection === 'summarize' && <SummarizeSection vm={vm} />}
 
-					{activeSection === 'tuning' && <TuningSection vm={vm} />}
-
 					{activeSection === 'dictation' && <DictationSection />}
 
 					{activeSection === 'api' && <ApiSection vm={vm} />}
-
-					{activeSection === 'privacy' && <PrivacySection vm={vm} />}
 
 					{activeSection === 'advanced' && <AdvancedSection vm={vm} />}
 

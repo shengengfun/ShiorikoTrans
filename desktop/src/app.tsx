@@ -14,6 +14,7 @@ import { BoundaryFallback } from './components/boundary-fallback'
 import ErrorModalWithContext from './components/error-modal-with-context'
 import { FilesProvider } from './providers/files-provider'
 import { HotkeyProvider } from './providers/hotkey'
+import { TranscriptionProvider } from '~/providers/transcription'
 import { ToastProvider } from './providers/toast'
 import { Toaster } from '~/components/ui/sonner'
 import { TooltipProvider } from '~/components/ui/tooltip'
@@ -44,12 +45,14 @@ function AppContent() {
 							<HotkeyProvider>
 								<ErrorModalWithContext />
 								<FilesProvider>
-									<Routes>
-										<Route path="/" element={<HomePage />} />
-										<Route path="/setup" element={<SetupPage />} />
-										<Route path="/batch" element={<BatchPage />} />
-										<Route path="/translate" element={<TranslatePage />} />
-									</Routes>
+									<TranscriptionProvider>
+										<Routes>
+											<Route path="/" element={<HomePage />} />
+											<Route path="/setup" element={<SetupPage />} />
+											<Route path="/batch" element={<BatchPage />} />
+											<Route path="/translate" element={<TranslatePage />} />
+										</Routes>
+									</TranscriptionProvider>
 								</FilesProvider>
 								<Toaster position="bottom-right" />
 							</HotkeyProvider>

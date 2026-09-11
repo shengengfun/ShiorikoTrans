@@ -277,5 +277,19 @@
 	"unloadModelAfterInactivity": "空闲后卸载模型",
 	"unloadModelAfterInactivityInfo": "无转录活动时释放模型内存和显存。重新加载模型时，下一次转录可能需要更长时间。",
 	"zeroMeansNever": "设为 0 可让模型保持加载状态。",
-	"hardwareAcceleration": "硬件加速"
+	"hardwareAcceleration": "硬件加速",
+	"modelSettings": "模型设置",
+	"modelSettingsNoOptions": "该引擎暂无可调参数，仅通用选项生效。",
+	"modelFile": "模型文件",
+	"engine": "引擎",
+	"whenFinished": "转录完成时",
+	"recording": "录音",
+	"exportFormat": "默认导出格式",
+	"transcriptFormat": "转录文本",
+	"summaryFormat": "摘要",
+	"recentFiles": "最近文件",
+	"recentLanguages": "最近语言",
+	"noRecentFiles": "暂无最近转录",
+	"noRecentLanguages": "暂无最近语言",
+	"clear": "清除"
 }

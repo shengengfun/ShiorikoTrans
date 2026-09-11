@@ -7,21 +7,33 @@ import * as config from '~/lib/config'
 import type { NamedPath } from '~/lib/types'
 import { useFilesContext } from '~/providers/files-provider'
 import { usePreferenceProvider } from '~/providers/preference'
+import { useTranscriptionProvider } from '~/providers/transcription'
 
 export function useMediaSelection() {
 	const location = useLocation()
 	const navigate = useNavigate()
 	const preference = usePreferenceProvider()
 	const { files, setFiles } = useFilesContext()
+	const session = useTranscriptionProvider()
 	const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 	const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
 	const [isCollectingFolder, setIsCollectingFolder] = useState(false)
 
 	useEffect(() => {
+		// Keep the running session's file when the user comes back to the page.
+		if (session.loading && session.activeFile) return
 		setFiles([])
 		setSelectedFolder(null)
 		if (files.length !== 1) setAudio(null)
 	}, [location])
+
+	// Restore the selection of an in-flight transcription (page may have been
+	// unmounted while it was running).
+	useEffect(() => {
+		if (!session.loading || !session.activeFile || files.length > 0) return
+		setSelectedFolder(null)
+		setFiles([session.activeFile])
+	}, [session.loading, session.activeFile, files.length])
 
 	useEffect(() => {
 		if (selectedFolder) setAudio(null)

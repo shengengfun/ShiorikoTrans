@@ -122,3 +122,16 @@ export function getModelPipeline(filename: string): ModelPipeline {
 	const type = detectModelType(filename)
 	return MODEL_PIPELINES[type]
 }
+
+/**
+ * Resolve the pipeline for a model *path*. Folder-based models
+ * (`models/transcribe/<ModelName>/model.bin`) must be detected from the folder
+ * name, since the file itself is generically named.
+ */
+export function getModelPipelineFromPath(modelPath: string): ModelPipeline {
+	const parts = modelPath.split(/[\\/]/).filter(Boolean)
+	const filename = parts[parts.length - 1] ?? ''
+	const parent = parts[parts.length - 2] ?? ''
+	const genericFile = /^(ggml[-_])?(model|encoder|decoder)\.[a-z0-9]+$/i.test(filename)
+	return getModelPipeline(genericFile && parent ? parent : filename)
+}

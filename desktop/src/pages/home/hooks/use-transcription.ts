@@ -32,6 +32,9 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 	const [segments, setSegments] = useState<transcript.Segment[] | null>(null)
 	const [translatedSegments, setTranslatedSegments] = useState<transcript.Segment[] | null>(null)
 	const [progress, setProgress] = useState<number | null>(0)
+	// Source of the running/last session, so the transcription page can restore
+	// its selection after the user navigated away and back.
+	const [activeFile, setActiveFile] = useState<{ name: string; path: string } | null>(null)
 
 	useEffect(() => { preferenceRef.current = preference }, [preference])
 
@@ -74,6 +77,7 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 		}
 
 		startKeepAwake()
+		setActiveFile({ name: path.split(/[\\/]/).pop() || path, path })
 		setSegments(null)
 		setTranslatedSegments(null)
 		onResetSummary()
@@ -163,5 +167,5 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 		}
 	}
 
-	return { loading, isAborting, showForceAbort, segments, setSegments, translatedSegments, setTranslatedSegments, progress, setProgress, transcribe, onAbort, onForceAbort }
+	return { loading, isAborting, showForceAbort, segments, setSegments, translatedSegments, setTranslatedSegments, progress, setProgress, transcribe, onAbort, onForceAbort, activeFile }
 }

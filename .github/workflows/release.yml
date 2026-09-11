@@ -72,6 +72,19 @@ jobs:
             - name: Run pre_build.py on ${{ matrix.platform }}
               run: uv run scripts/pre_build.py --target ${{ matrix.target_triple }}
 
+            - name: Generate release notes
+              id: notes
+              shell: bash
+              run: |
+                  ver=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' desktop/src-tauri/tauri.conf.json | head -1)
+                  f="release-notes/v${ver}.md"
+                  if [ -f "$f" ]; then cat "$f"; else echo "> 本版说明待补充，请在此 Release 页编辑。"; fi > body.md
+                  {
+                    echo 'body<<EOF'
+                    cat body.md
+                    echo 'EOF'
+                  } >> "$GITHUB_OUTPUT"
+
             - name: Setup macOS signing env
               if: matrix.platform == 'macos-latest' && inputs.sign-macos
               run: |
@@ -99,8 +112,10 @@ jobs:
               with:
                   tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
                   releaseName: "v__VERSION__"
-                  releaseBody: "What's new? 🎉📣"
-                  prerelease: true
+                  # 正文来自 release-notes/<tag>.md（模板见 release-notes/TEMPLATE.md）
+                  releaseBody: ${{ steps.notes.outputs.body }}
+                  # 只有带 "-" 的 tag（如 v1.1.0-beta.1）才算预发布，否则 /releases/latest 会跳过它
+                  prerelease: ${{ contains(github.ref_name, '-') }}
                   args: ${{ matrix.args }} ${{ matrix.platform == 'windows-latest' && inputs.sign-windows && '--config src-tauri/tauri.windows.signing.conf.json' || '' }}
                   projectPath: "./desktop"
                   tauriScript: pnpm exec tauri

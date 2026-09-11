@@ -381,5 +381,19 @@
 	"unloadModelAfterInactivity": "Unload model after inactivity",
 	"unloadModelAfterInactivityInfo": "Releases model memory and VRAM after there has been no transcription activity. The next transcription may take longer while the model reloads.",
 	"zeroMeansNever": "Set to 0 to keep the model loaded.",
-	"hardwareAcceleration": "Hardware Acceleration"
+	"hardwareAcceleration": "Hardware Acceleration",
+	"modelSettings": "Model settings",
+	"modelSettingsNoOptions": "This engine has no tunable parameters yet — only the shared options apply.",
+	"modelFile": "Model file",
+	"engine": "Engine",
+	"whenFinished": "When transcription finishes",
+	"recording": "Recording",
+	"exportFormat": "Default export format",
+	"transcriptFormat": "Transcript",
+	"summaryFormat": "Summary",
+	"recentFiles": "Recent files",
+	"recentLanguages": "Recent languages",
+	"noRecentFiles": "No recent transcripts yet",
+	"noRecentLanguages": "No recent languages yet",
+	"clear": "Clear"
 }

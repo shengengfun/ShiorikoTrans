@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { FolderOpen, PencilLine, Trash2 } from 'lucide-react'
+import { FolderOpen, PencilLine, Settings2, Trash2 } from 'lucide-react'
 import { m } from '~/paraglide/messages.js'
 import { ReactComponent as FolderIcon } from '~/icons/folder.svg'
 import { ReactComponent as LinkIcon } from '~/icons/link.svg'
 import { ReactComponent as WrenchIcon } from '~/icons/wrench.svg'
+import { openModelSettings } from '~/lib/app'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
@@ -148,6 +149,15 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 									)}
 								</div>
 							))}
+							<Button
+								variant="outline"
+								size="sm"
+								className="mt-2 h-10 w-full justify-between px-3"
+								disabled={!vm.preference.modelPath}
+								onMouseDown={() => openModelSettings(vm.preference.modelPath)}>
+								{m.modelSettings()}
+								<Settings2 className="size-3.5" />
+							</Button>
 						</div>
 
 						{!vm.isMacOS && (
