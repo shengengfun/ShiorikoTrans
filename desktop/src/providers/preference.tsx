@@ -2,7 +2,7 @@ import { ReactNode, SetStateAction, createContext, useContext, useEffect, useRef
 import { useLocalStorage } from 'usehooks-ts'
 import { load } from '@tauri-apps/plugin-store'
 import * as config from '~/lib/config'
-import { applyAccentColor, applyThemePalette, backgroundOverlay, DEFAULT_PALETTE_ID } from '~/lib/appearance'
+import { ACCENT_PRESETS, applyAccentColor, applyThemePalette, backgroundOverlay, DEFAULT_ACCENT_ID, DEFAULT_PALETTE_ID } from '~/lib/appearance'
 import { TextFormat } from '~/components/format-select'
 import { ModifyState } from '~/lib/types'
 import { supportedLanguages } from '~/lib/i18n'
@@ -215,7 +215,7 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [systemDark, setSystemDark] = useState(systemIsDark)
 	// Resolved scheme (what the CSS class and the accent helpers use).
 	const theme: 'light' | 'dark' = themeMode === 'system' ? (systemDark ? 'dark' : 'light') : themeMode
-	const [accentPreset, setAccentPreset] = useLocalStorage<string>('prefs_accent_preset', 'blue')
+	const [accentPreset, setAccentPreset] = useLocalStorage<string>('prefs_accent_preset', DEFAULT_ACCENT_ID)
 	const [accentCustomColor, setAccentCustomColor] = useLocalStorage<string | null>('prefs_accent_custom_color', null)
 	const [customBackground, setCustomBackground] = useLocalStorage<string | null>('prefs_custom_background', null)
 	const [recentFiles, setRecentFiles] = useLocalStorage<RecentFile[]>('prefs_recent_files', [])
@@ -327,6 +327,12 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		applyAccentColor(accentPreset, accentCustomColor, theme)
 	}, [accentPreset, accentCustomColor, theme])
+
+	// Legacy accent ids (e.g. the removed 'blue' preset) fall back to the default
+	// 三船栞子 colour so a swatch is always selected in the appearance page.
+	useEffect(() => {
+		if (!ACCENT_PRESETS.some((preset) => preset.id === accentPreset)) setAccentPreset(DEFAULT_ACCENT_ID)
+	}, [accentPreset, setAccentPreset])
 
 	// Custom background image behind the (translucent) cards
 	useEffect(() => {

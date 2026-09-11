@@ -2,7 +2,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { m } from '~/paraglide/messages.js'
-import { ACCENT_PRESETS, THEME_PALETTES, accentHex, hexToHsl, hslToHex } from '~/lib/appearance'
+import { ACCENT_PRESETS, DEFAULT_ACCENT_ID, THEME_PALETTES, accentHex, hexToHsl, hslToHex } from '~/lib/appearance'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
@@ -173,8 +173,10 @@ function CustomColorPicker({ color, onChange }: { color: string; onChange: (hex:
 export function AppearanceSection({ vm }: { vm: SettingsViewModel }) {
 	const prefs = vm.preference
 	const custom = prefs.accentCustomColor
-	const activePreset = custom ? null : prefs.accentPreset
-	const activeHex = accentHex(prefs.accentPreset, custom) ?? '#37b484'
+	// Fall back to the default colour when an older/removed preset id is stored.
+	const presetId = ACCENT_PRESETS.some((preset) => preset.id === prefs.accentPreset) ? prefs.accentPreset : DEFAULT_ACCENT_ID
+	const activePreset = custom ? null : presetId
+	const activeHex = accentHex(presetId, custom) ?? '#37b484'
 
 	async function pickBackground() {
 		const file = await open({
