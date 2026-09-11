@@ -1,11 +1,26 @@
 import { open } from '@tauri-apps/plugin-dialog'
 import { m } from '~/paraglide/messages.js'
-import { ACCENT_PRESETS } from '~/lib/appearance'
+import { ACCENT_PRESETS, THEME_PALETTES } from '~/lib/appearance'
 import { Button } from '~/components/ui/button'
 import { Label } from '~/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { Field, SectionCard, type SettingsViewModel } from './shared'
+import { SectionCard, type SettingsViewModel } from './shared'
 import { cn } from '~/lib/style'
+import type { ThemeMode } from '~/providers/preference'
+
+const THEME_MODE_OPTIONS: { value: ThemeMode; label: () => string }[] = [
+	{ value: 'system', label: () => m.followSystem() },
+	{ value: 'light', label: () => m.light() },
+	{ value: 'dark', label: () => m.dark() },
+]
+
+/** Palette display names (id -> i18n message). */
+const PALETTE_LABELS: Record<string, () => string> = {
+	default: () => m.themeDefault(),
+	midnight: () => m.themeMidnight(),
+	nord: () => m.themeNord(),
+	warm: () => m.themeWarm(),
+	ink: () => m.themeInk(),
+}
 
 export function AppearanceSection({ vm }: { vm: SettingsViewModel }) {
 	const prefs = vm.preference
@@ -24,20 +39,66 @@ export function AppearanceSection({ vm }: { vm: SettingsViewModel }) {
 
 	return (
 		<div className="space-y-5">
+			{/* Theme mode: follow system / light / dark */}
 			<SectionCard>
-				<Field label={m.theme()}>
-					<Select value={prefs.theme} onValueChange={(value) => prefs.setTheme(value as 'light' | 'dark')}>
-						<SelectTrigger className="capitalize"><SelectValue placeholder={m.selectTheme()} /></SelectTrigger>
-						<SelectContent>
-							<SelectItem value="light">{m.light()}</SelectItem>
-							<SelectItem value="dark">{m.dark()}</SelectItem>
-						</SelectContent>
-					</Select>
-				</Field>
+				<div className="space-y-2">
+					<Label>{m.theme()}</Label>
+					<div className="flex h-9 items-center gap-1 rounded-lg border border-border/55 bg-muted/40 p-1">
+						{THEME_MODE_OPTIONS.map((option) => (
+							<button
+								key={option.value}
+								type="button"
+								onClick={() => prefs.setThemeMode(option.value)}
+								className={cn(
+									'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+									prefs.themeMode === option.value ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
+								)}>
+								{option.label()}
+							</button>
+						))}
+					</div>
+					{prefs.themeMode === 'system' && (
+						<p className="text-xs text-muted-foreground">
+							{m.systemThemeNow()} · {prefs.theme === 'dark' ? m.dark() : m.light()}
+						</p>
+					)}
+				</div>
 			</SectionCard>
 
+			{/* Neutral palette (surfaces) — available for both light and dark */}
 			<SectionCard>
-				<Field label="Accent color">
+				<div className="space-y-2">
+					<Label>{m.themePalette()}</Label>
+					<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+						{THEME_PALETTES.map((palette) => {
+							const selected = prefs.themePalette === palette.id
+							const preview = prefs.theme === 'dark' ? palette.previewDark : palette.previewLight
+							return (
+								<button
+									key={palette.id}
+									type="button"
+									onClick={() => prefs.setThemePalette(palette.id)}
+									className={cn(
+										'flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors',
+										selected ? 'border-primary bg-primary/8' : 'border-border/60 hover:border-foreground/30 hover:bg-accent/40',
+									)}>
+									<span
+										className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60"
+										style={{ backgroundColor: preview }}>
+										<span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: custom ?? presetFallback }} />
+									</span>
+									<span className="min-w-0 truncate text-sm font-medium">{(PALETTE_LABELS[palette.id] ?? (() => palette.name))()}</span>
+								</button>
+							)
+						})}
+					</div>
+				</div>
+			</SectionCard>
+
+			{/* Accent color — layered on top of the palette, in both schemes */}
+			<SectionCard>
+				<div className="space-y-2">
+					<Label>{m.accentColor()}</Label>
 					<div className="flex flex-wrap items-center gap-2.5">
 						{ACCENT_PRESETS.map((preset) => {
 							const selected = activePreset === preset.id
@@ -60,7 +121,7 @@ export function AppearanceSection({ vm }: { vm: SettingsViewModel }) {
 							)
 						})}
 						<label
-							title="Custom color"
+							title={m.accentColor()}
 							className={cn(
 								'relative flex h-9 w-9 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 transition-transform hover:scale-110',
 								custom ? 'border-foreground ring-2 ring-foreground/20' : 'border-dashed border-border/60 hover:border-foreground/40',
@@ -75,38 +136,33 @@ export function AppearanceSection({ vm }: { vm: SettingsViewModel }) {
 						</label>
 						{custom && (
 							<Button variant="ghost" size="sm" onClick={() => prefs.setAccentCustomColor(null)}>
-								Reset custom
+								{m.resetCustom()}
 							</Button>
 						)}
 					</div>
-				</Field>
+				</div>
 			</SectionCard>
 
+			{/* Custom background image */}
 			<SectionCard>
-				<Field label="Custom background">
+				<div className="space-y-2">
+					<Label>{m.customBackground()}</Label>
 					<div className="flex flex-wrap items-center gap-2">
 						<Button variant="outline" onClick={pickBackground}>
-							Choose image…
+							{m.chooseImage()}
 						</Button>
 						{prefs.customBackground && (
 							<Button variant="ghost" onClick={() => prefs.setCustomBackground(null)}>
-								Remove
+								{m.remove()}
 							</Button>
 						)}
 					</div>
-					{prefs.customBackground && (
-						<p className="mt-2 truncate font-mono text-xs text-muted-foreground">{prefs.customBackground}</p>
-					)}
-				</Field>
+					{prefs.customBackground && <p className="truncate font-mono text-xs text-muted-foreground">{prefs.customBackground}</p>}
+				</div>
 			</SectionCard>
 
 			<SectionCard>
-				<div className="space-y-2">
-					<Label>说明</Label>
-					<p className="text-sm leading-relaxed text-muted-foreground">
-						主题色可选用预设色板或点击 “#” 输入任意 HTML 色号（立即生效）。自定义背景图片会在卡片背后显示，自动叠加半透明遮罩以保证可读性。
-					</p>
-				</div>
+				<p className="text-sm leading-relaxed text-muted-foreground">{m.appearanceInfo()}</p>
 			</SectionCard>
 		</div>
 	)

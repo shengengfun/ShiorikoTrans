@@ -39,17 +39,24 @@ For high accuracy and more computational resources, excels in complex scenarios.
 
 ### 🦜 Parakeet TDT 0.6B v3
 
-Supports streaming and is best suited for dictation.
+NVIDIA Parakeet TDT 0.6B v3 —— 0.6B 参数，支持 25 种欧洲语言（保加利亚语/克罗地亚语/捷克语/丹麦语/荷兰语/英语/爱沙尼亚语/芬兰语/法语/德语/希腊语/匈牙利语/意大利语/拉脱维亚语/立陶宛语/马耳他语/波兰语/葡萄牙语/罗马尼亚语/俄语/斯洛伐克语/斯洛文尼亚语/西班牙语/瑞典语/乌克兰语），带语言检测，速度很快。需要 VAD 辅助模型（应用会自动下载）。
 
-[👉 View Model](https://huggingface.co/shiorikotrans-app/parakeet-tdt-0.6b-v3-gguf/tree/main)  
-[🔽 Download Q4_K_M](https://huggingface.co/shiorikotrans-app/parakeet-tdt-0.6b-v3-gguf/resolve/main/parakeet-tdt-0.6b-v3-Q4_K_M.gguf?download=true)
+[🔽 Download Q4_K_M](https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/main/parakeet-tdt-0.6b-v3-Q4_K_M.gguf?download=true)
 
 ### ⚡ Nemotron 3.5 ASR Streaming 0.6B
 
-Supports streaming and is best suited for dictation.
+NVIDIA Nemotron 3.5 ASR Streaming 0.6B —— 32 种语言（含中/日/韩/阿/印地/越/俄/德/法/西/葡…），RNNT 流式结构，适合听写与实时场景。需要 VAD 辅助模型（应用会自动下载）。
 
-[👉 View Model](https://huggingface.co/shiorikotrans-app/nemotron-3.5-asr-streaming-0.6b-gguf)  
-[🔽 Download Q4_K_M](https://huggingface.co/shiorikotrans-app/nemotron-3.5-asr-streaming-0.6b-gguf/resolve/main/nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf?download=true)
+[🔽 Download Q4_K_M](https://huggingface.co/handy-computer/nemotron-3.5-asr-streaming-0.6b-gguf/resolve/main/nemotron-3.5-asr-streaming-0.6b-Q4_K_M.gguf?download=true)
+
+### 🀄 SenseVoice Small (int8)
+
+FunAudioLLM SenseVoice Small 的 ONNX CTC 导出，支持中文 / 英文 / 粤语 / 日语 / 韩语，内置语种与情感/事件识别，推理极快。需要 `model.int8.onnx` 与同目录的 `tokens.txt` 两个文件。
+
+[🔽 model.int8.onnx](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/model.int8.onnx?download=true)
+[🔽 tokens.txt](https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/main/tokens.txt?download=true)
+
+> 以上模型均可在 **设置 → 模型 → 模型目录** 里一键下载（含 VAD 辅助模型），无需手动放文件。
 
 ### Models optimised for other languages
 

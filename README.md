@@ -115,8 +115,12 @@
 
 # 模型与引擎 🤖
 
-- 识别模型：**Whisper** 系列（Tiny → Large v3 / Large v3 Turbo）、**Parakeet TDT 0.6B v3**、**Nemotron 3.5 ASR Streaming 0.6B**
-- 推理引擎：[`sona`](https://github.com/thewh1teagle/sona) —— Rust + `whisper.cpp` / ggml 的本地推理进程，由 App 以 sidecar 方式拉起，通过本地 HTTP 通信
+- 识别模型（**设置 → 模型 → 模型目录** 一键下载，无需手动找链接）：
+  - **Parakeet TDT 0.6B v3**（0.6B，25 种欧洲语言，TDT 解码，速度快，推荐）
+  - **Nemotron 3.5 ASR Streaming 0.6B**（0.6B，32 种语言，流式）
+  - **SenseVoice Small**（int8，中文 / 英文 / 粤语 / 日语 / 韩语，速度极快）
+  - **Whisper** 系列（Tiny → Large v3 / Large v3 Turbo，99 种语言，兼容性最好）
+- 推理引擎：[`sona`](https://github.com/thewh1teagle/sona) —— Rust + `whisper.cpp` / ggml 的本地推理进程，由 App 以 sidecar 方式拉起，通过本地 HTTP 通信；Parakeet / Nemotron 走 GGUF（自带 VAD 分段，VAD 辅助模型会自动下载），SenseVoice 走 ONNX（CTC 导出 + `tokens.txt`）
 - 模型目录按用途分文件夹：`models/transcribe`、`models/translate`、`models/vad`、`models/diarize`
 - 可选模型清单与下载地址见 [docs/models.md](docs/models.md)
 

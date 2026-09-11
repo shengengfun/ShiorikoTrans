@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { listen } from '@tauri-apps/api/event'
 import { FolderOpen, PencilLine, Settings2, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { m } from '~/paraglide/messages.js'
 import { ReactComponent as FolderIcon } from '~/icons/folder.svg'
 import { ReactComponent as LinkIcon } from '~/icons/link.svg'
@@ -8,23 +10,133 @@ import { openModelSettings } from '~/lib/app'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
+import { Progress } from '~/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { SectionCard, type SettingsViewModel } from './shared'
-import { getFriendlyModelName } from '~/lib/model'
-import { detectModelType, MODEL_PIPELINES } from '~/lib/model-pipeline'
+import { getFriendlyModelName, installCatalogModel, isCatalogModelInstalled } from '~/lib/model'
+import { MODEL_CATALOG, type CatalogModel } from '~/lib/model-catalog'
+import { detectModelType, MODEL_PIPELINES, type ModelType } from '~/lib/model-pipeline'
 
 function getModelQuantization(filename: string): string | null {
 	const match = filename.match(/(Q\d+_[A-Z0-9]+|F16|F32|Q4_0|Q5_0|Q8_0)/i)
 	return match ? match[1].toUpperCase() : null
 }
 
+/** Engine badge colours — theme tokens so they stay readable in dark mode. */
+const ENGINE_BADGES: Record<ModelType, string> = {
+	whisper: 'bg-chart-1/15 text-chart-1',
+	parakeet: 'bg-chart-2/15 text-chart-2',
+	sensevoice: 'bg-chart-3/15 text-chart-3',
+	hunyuan: 'bg-chart-4/15 text-chart-4',
+	nemotron: 'bg-chart-5/15 text-chart-5',
+	custom: 'bg-muted text-muted-foreground',
+}
+
+function engineBadge(engine: ModelType) {
+	return `rounded px-1.5 py-0.5 text-[10px] font-medium capitalize ${ENGINE_BADGES[engine] ?? ENGINE_BADGES.custom}`
+}
+
+function formatSize(sizeMB: number) {
+	return sizeMB >= 1024 ? `${(sizeMB / 1024).toFixed(1)} GB` : `${sizeMB} MB`
+}
+
 export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 	const [editingPath, setEditingPath] = useState<string | null>(null)
 	const [editingName, setEditingName] = useState('')
+	const [installingId, setInstallingId] = useState<string | null>(null)
+	const [installProgress, setInstallProgress] = useState(0)
+	const [installed, setInstalled] = useState<Record<string, boolean>>({})
 	const currentModel = vm.models.find((model) => model.path === vm.preference.modelPath)
+
+	// Live progress bar for catalog downloads (the Rust side emits `download_progress`).
+	useEffect(() => {
+		const unlisten = listen<[number, number]>('download_progress', (event) => {
+			const [current, total] = event.payload
+			if (total > 0) setInstallProgress(Math.min(100, Math.round((current / total) * 100)))
+		})
+		return () => {
+			unlisten.then((fn) => fn())
+		}
+	}, [])
+
+	async function refreshInstalled() {
+		const entries = await Promise.all(MODEL_CATALOG.map(async (entry) => [entry.id, await isCatalogModelInstalled(entry)] as const))
+		setInstalled(Object.fromEntries(entries))
+	}
+
+	useEffect(() => {
+		refreshInstalled()
+	}, [vm.models.length])
+
+	async function install(entry: CatalogModel) {
+		setInstallingId(entry.id)
+		setInstallProgress(0)
+		try {
+			const path = await installCatalogModel(entry)
+			if (path) {
+				toast.success(m.downloadComplete())
+				await refreshInstalled()
+				await vm.loadModels()
+				await vm.selectModel(path)
+			}
+		} catch (error) {
+			console.error('catalog install failed:', error)
+			toast.error(String(error))
+		} finally {
+			setInstallingId(null)
+		}
+	}
 
 	return (
 		<div className="space-y-5">
+			<SectionCard>
+				<div className="space-y-4">
+					<div className="space-y-1">
+						<Label>{m.modelCatalog()}</Label>
+						<p className="text-xs text-muted-foreground">{m.modelCatalogInfo()}</p>
+					</div>
+					<div className="divide-y divide-border/45 overflow-hidden rounded-xl border border-border/55">
+						{MODEL_CATALOG.map((entry) => {
+							const isInstalled = installed[entry.id] === true
+							const busy = installingId === entry.id
+							return (
+								<div key={entry.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+									<div className="min-w-0 flex-1">
+										<div className="flex flex-wrap items-center gap-1.5">
+											<span className="truncate text-sm font-medium">{entry.name}</span>
+											{entry.quantization && (
+												<span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{entry.quantization}</span>
+											)}
+											{entry.recommended && (
+												<span className="rounded bg-primary/12 px-1.5 py-0.5 text-[10px] font-medium text-primary">{m.recommended()}</span>
+											)}
+										</div>
+										<div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+											<span className={engineBadge(entry.engine)}>{entry.engine}</span>
+											<span>
+												{entry.languageCount != null
+													? m.languagesCount({ count: String(entry.languageCount) })
+													: (entry.languageCodes ?? []).join(' · ')}
+											</span>
+											<span>{formatSize(entry.sizeMB)}</span>
+											{entry.requiresVad && <span>{m.needsVadModel()}</span>}
+										</div>
+										{busy && <Progress className="mt-2 h-1.5" value={installProgress} />}
+									</div>
+									<Button
+										size="sm"
+										variant={isInstalled ? 'ghost' : 'default'}
+										disabled={busy || installingId !== null}
+										onClick={() => install(entry)}>
+										{busy ? m.downloadingModel() : isInstalled ? m.installed() : m.download()}
+									</Button>
+								</div>
+							)
+						})}
+					</div>
+				</div>
+			</SectionCard>
+
 			<SectionCard>
 				<div className="space-y-5">
 					<div className="space-y-2">
@@ -37,7 +149,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 								placeholder={m.pasteModelLink()}
 								onKeyDown={(event) => (event.key === 'Enter' ? vm.downloadModel() : null)}
 							/>
-							<Button variant="default" size="icon" onClick={vm.downloadModel} className="shrink-0">
+							<Button variant="default" size="icon" onClick={vm.downloadModel} className="shrink-0" aria-label={m.downloadModel()}>
 								<svg
 									aria-hidden="true"
 									focusable="false"
@@ -80,9 +192,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 															{fileCount} files
 														</span>
 													)}
-													<span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${modelType === 'whisper' ? 'bg-blue-100 text-blue-700' : modelType === 'nemotron' ? 'bg-purple-100 text-purple-700' : modelType === 'sensevoice' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-														{pipeline.engine}
-													</span>
+													<span className={engineBadge(modelType)}>{pipeline.engine}</span>
 												</span>
 											</SelectItem>
 										)
@@ -94,7 +204,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 									value={vm.preference.modelPath ?? undefined}
 									onValueChange={vm.selectModel}>
 									<SelectTrigger>
-										<SelectValue placeholder="选择模型文件" />
+										<SelectValue placeholder={m.selectModel()} />
 									</SelectTrigger>
 									<SelectContent>
 										{vm.modelFiles.map((file, index) => {
@@ -144,7 +254,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 									</Button>
 									{vm.deleteModel && (
 										<Button variant="ghost" size="sm" className="h-7 px-2.5 text-destructive hover:text-destructive" onClick={() => vm.deleteModel(currentModel.path)}>
-											<Trash2 className="size-3.5" /> 删除
+											<Trash2 className="size-3.5" /> {m.remove()}
 										</Button>
 									)}
 								</div>

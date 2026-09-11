@@ -2,12 +2,14 @@ import { event } from '@tauri-apps/api'
 import { invoke } from '@tauri-apps/api/core'
 import * as webview from '@tauri-apps/api/webviewWindow'
 import * as dialog from '@tauri-apps/plugin-dialog'
+import * as fs from '@tauri-apps/plugin-fs'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { m } from '~/paraglide/messages.js'
 import { toast } from 'sonner'
 import successSound from '~/assets/success.mp3'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
 import { resolveAuxModelPath } from '~/lib/model-paths'
+import type { ModelMetadata } from '~/lib/model'
 import * as config from '~/lib/config'
 import { setActivity } from '~/lib/activity'
 import { startKeepAwake, stopKeepAwake } from '~/lib/keep-awake'
@@ -90,16 +92,26 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 			const current = preferenceRef.current
 			if (!current.modelPath) throw new Error('No model selected. Please download or select a model first.')
 			const loadResult = await invoke<string>('load_model', {
-			modelPath: current.modelPath,
-			gpuDevice: current.gpuDevice,
-			unloadTimeoutMinutes: current.unloadTimeoutMinutes,
-		})
-		if (loadResult === 'gpu_fallback') toast.warning(m.gpuFallbackToCpu(), { position: 'bottom-center', duration: 8000 })
+				modelPath: current.modelPath,
+				gpuDevice: current.gpuDevice,
+				unloadTimeoutMinutes: current.unloadTimeoutMinutes,
+			})
+			if (loadResult === 'gpu_fallback') toast.warning(m.gpuFallbackToCpu(), { position: 'bottom-center', duration: 8000 })
 
-			const requiresVad = current.modelMetadata?.capabilities.requires_vad ?? false
+			// Parakeet / Nemotron cannot run without the Silero VAD helper model.
+			// The metadata may not have been fetched yet (model switched from the
+			// title bar), so resolve it on demand before deciding.
+			const metadata = current.modelMetadata ?? (await invoke<ModelMetadata>('get_model_metadata', { modelPath: current.modelPath }).catch(() => null))
+			const requiresVad = metadata?.capabilities.requires_vad ?? false
 			const modelsFolder = current.diarizeEnabled || current.stableTimestampsEnabled || requiresVad ? await invoke<string>('get_models_folder') : null
 			const diarizeModel = current.diarizeEnabled && modelsFolder ? await resolveAuxModelPath(modelsFolder, 'diarize', config.diarizeModelFilename) : undefined
 			const vadModel = (current.stableTimestampsEnabled || requiresVad) && modelsFolder ? await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename) : undefined
+
+			// Fetch the helper model on demand so a freshly downloaded model just works.
+			if (vadModel && !(await fs.exists(vadModel))) {
+				toast.info(m.downloadingVadModel(), { position: 'bottom-center' })
+				await invoke('download_model', { url: config.vadModelUrl, path: vadModel })
+			}
 
 			const baseOptions = {
 				path,

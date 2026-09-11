@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { ErrorModalContext } from '~/providers/error-modal'
 import { usePreferenceProvider } from '~/providers/preference'
 import * as utils from '~/lib/model'
+import type { CatalogModel } from '~/lib/model-catalog'
 import * as osExt from '@tauri-apps/plugin-os'
 import { resolveAuxModelPath } from '~/lib/model-paths'
 import * as config from '~/lib/config'
@@ -135,6 +136,16 @@ export function viewModel() {
 		navigate('/#settings', { replace: true, state: { disableBack: true } })
 	}
 
+	/** One-click install of a curated catalog model (e.g. Parakeet / Whisper turbo). */
+	async function installFromCatalog(entry: CatalogModel) {
+		handleProgressEvenets()
+		const path = await utils.installCatalogModel(entry)
+		if (!path) return
+		if (await selectDownloadedModel(path)) {
+			navigate('/', { replace: true, state: { disableBack: true } })
+		}
+	}
+
 	useEffect(() => {
 		// Don't auto-download on startup — let user choose
 		handleProgressEvenets()
@@ -146,6 +157,7 @@ export function viewModel() {
 		setErrorModal,
 		downloadProgress,
 		downloadModel,
+		installFromCatalog,
 		downloadIfOnline,
 		setDownloadProgress,
 		downloadProgressRef,

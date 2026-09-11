@@ -1,8 +1,13 @@
 import { m } from '~/paraglide/messages.js'
+import { MODEL_CATALOG } from '~/lib/model-catalog'
 import { viewModel } from './view-model'
 import { Progress } from '~/components/ui/progress'
 import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent } from '~/components/ui/dialog'
+
+function formatSize(sizeMB: number) {
+	return sizeMB >= 1024 ? `${(sizeMB / 1024).toFixed(1)} GB` : `${sizeMB} MB`
+}
 
 function App() {
 	const vm = viewModel()
@@ -17,7 +22,7 @@ function App() {
 				</div>
 				<p className="mt-3 text-muted-foreground">
 					{isDownloading
-						? 'Downloading the default transcription model...'
+						? 'Downloading the transcription model...'
 						: 'Choose how to get started with your first model.'}
 				</p>
 
@@ -28,13 +33,19 @@ function App() {
 				</div>
 
 				<div className="mt-8 flex flex-col gap-3">
-					<Button
-						className="w-full max-w-sm mx-auto"
-						onClick={vm.downloadModel}
-						disabled={isDownloading}
-					>
-						{isDownloading ? 'Downloading...' : 'Download Default Model'}
-					</Button>
+					{MODEL_CATALOG.filter((entry) => entry.recommended).map((entry) => (
+						<Button
+							key={entry.id}
+							className="mx-auto w-full max-w-sm justify-between"
+							onClick={() => vm.installFromCatalog(entry)}
+							disabled={isDownloading}>
+							<span className="truncate">
+								{entry.name}
+								{entry.quantization ? ` · ${entry.quantization}` : ''}
+							</span>
+							<span className="shrink-0 text-xs opacity-80">{formatSize(entry.sizeMB)}</span>
+						</Button>
+					))}
 					<Button
 						variant="secondary"
 						className="w-full max-w-sm mx-auto"

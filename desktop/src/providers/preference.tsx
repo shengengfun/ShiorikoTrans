@@ -2,7 +2,7 @@ import { ReactNode, SetStateAction, createContext, useContext, useEffect, useRef
 import { useLocalStorage } from 'usehooks-ts'
 import { load } from '@tauri-apps/plugin-store'
 import * as config from '~/lib/config'
-import { applyAccentColor, backgroundOverlay } from '~/lib/appearance'
+import { applyAccentColor, applyThemePalette, backgroundOverlay, DEFAULT_PALETTE_ID } from '~/lib/appearance'
 import { TextFormat } from '~/components/format-select'
 import { ModifyState } from '~/lib/types'
 import { supportedLanguages } from '~/lib/i18n'
@@ -16,6 +16,8 @@ import { getModelPipeline, getModelPipelineFromPath, ModelPipeline, ModelType } 
 
 type Direction = 'ltr' | 'rtl'
 export type HomeTab = 'record' | 'file' | 'link'
+/** `system` follows the OS light/dark preference. */
+export type ThemeMode = 'light' | 'dark' | 'system'
 
 export interface RecentFile {
 	name: string
@@ -54,7 +56,10 @@ export interface Preference {
 	modelOptions: ModelOptions
 	setModelOptions: ModifyState<ModelOptions>
 	theme: 'light' | 'dark'
-	setTheme: ModifyState<'light' | 'dark'>
+	themeMode: ThemeMode
+	setThemeMode: ModifyState<ThemeMode>
+	themePalette: string
+	setThemePalette: ModifyState<string>
 	accentPreset: string
 	setAccentPreset: ModifyState<string>
 	accentCustomColor: string | null
@@ -149,6 +154,20 @@ export interface ModelOptions {
 const systemIsDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
 const defaultDisplayLanguage = 'en-US'
 
+/** Migrate the legacy `prefs_theme` (light/dark only) into the new theme mode. */
+function initialThemeMode(): ThemeMode {
+	try {
+		const raw = localStorage.getItem('prefs_theme')
+		if (raw) {
+			const value = JSON.parse(raw)
+			if (value === 'light' || value === 'dark') return value
+		}
+	} catch {
+		/* ignore malformed values */
+	}
+	return 'system'
+}
+
 const defaultOptions = {
 	soundOnFinish: true,
 	focusOnFinish: true,
@@ -191,7 +210,11 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [textFormatTranscript, setTextFormatTranscript] = useLocalStorage<TextFormat>('prefs_text_format_transcript', 'pdf')
 	const [textFormatSummary, setTextFormatSummary] = useLocalStorage<TextFormat>('prefs_text_format_summary', 'md')
 	const isMounted = useRef<boolean>(false)
-	const [theme, setTheme] = useLocalStorage<'dark' | 'light'>('prefs_theme', systemIsDark ? 'dark' : 'light')
+	const [themeMode, setThemeMode] = useLocalStorage<ThemeMode>('prefs_theme_mode', initialThemeMode())
+	const [themePalette, setThemePalette] = useLocalStorage<string>('prefs_theme_palette', DEFAULT_PALETTE_ID)
+	const [systemDark, setSystemDark] = useState(systemIsDark)
+	// Resolved scheme (what the CSS class and the accent helpers use).
+	const theme: 'light' | 'dark' = themeMode === 'system' ? (systemDark ? 'dark' : 'light') : themeMode
 	const [accentPreset, setAccentPreset] = useLocalStorage<string>('prefs_accent_preset', 'blue')
 	const [accentCustomColor, setAccentCustomColor] = useLocalStorage<string | null>('prefs_accent_custom_color', null)
 	const [customBackground, setCustomBackground] = useLocalStorage<string | null>('prefs_custom_background', null)
@@ -280,12 +303,25 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	}, [])
 
 	useEffect(() => {
+		const query = window.matchMedia?.('(prefers-color-scheme: dark)')
+		if (!query) return
+		const listener = (event: MediaQueryListEvent) => setSystemDark(event.matches)
+		query.addEventListener('change', listener)
+		return () => query.removeEventListener('change', listener)
+	}, [])
+
+	useEffect(() => {
 		if (theme === 'dark') {
 			document.documentElement.classList.add('dark')
 		} else {
 			document.documentElement.classList.remove('dark')
 		}
 	}, [theme])
+
+	// Neutral palette (surfaces) — independent from the accent color.
+	useEffect(() => {
+		applyThemePalette(themePalette, theme)
+	}, [themePalette, theme])
 
 	// Accent color (preset palette or custom hex)
 	useEffect(() => {
@@ -386,7 +422,10 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		modelDisplayNames,
 		setModelDisplayNames,
 		theme,
-		setTheme,
+		themeMode,
+		setThemeMode,
+		themePalette,
+		setThemePalette,
 		accentPreset,
 		setAccentPreset,
 		accentCustomColor,

@@ -42,7 +42,7 @@ export function GeneralSection({ vm }: { vm: SettingsViewModel }) {
 
 	return (
 		<div className="space-y-5">
-			{/* Interface language + theme */}
+			{/* Interface language */}
 			<SectionCard>
 				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<div className="space-y-2">
@@ -61,27 +61,6 @@ export function GeneralSection({ vm }: { vm: SettingsViewModel }) {
 								))}
 							</SelectContent>
 						</Select>
-					</div>
-					<div className="space-y-2">
-						<Label>{m.theme()}</Label>
-						<div className="flex h-9 items-center gap-1 rounded-lg border border-border/55 bg-muted/40 p-1">
-							{(
-								[
-									{ value: 'light', label: m.light() },
-									{ value: 'dark', label: m.dark() },
-								] as const
-							).map((option) => (
-								<button
-									key={option.value}
-									type="button"
-									onClick={() => preference.setTheme(option.value)}
-									className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-										preference.theme === option.value ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-									}`}>
-									{option.label}
-								</button>
-							))}
-						</div>
 					</div>
 				</div>
 			</SectionCard>

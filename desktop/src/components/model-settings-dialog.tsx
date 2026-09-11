@@ -66,8 +66,9 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 	const options = preference.modelOptions
 	const setOptions = preference.setModelOptions
 	const isWhisper = pipeline.type === 'whisper' || pipeline.type === 'custom'
-	// SenseVoice / Hunyuan expose no decoding parameters at all.
-	const showParams = pipeline.type !== 'sensevoice' && pipeline.type !== 'hunyuan'
+	// SenseVoice / Hunyuan / Parakeet / Nemotron expose no decoding parameters.
+	const showParams = pipeline.type !== 'sensevoice' && pipeline.type !== 'hunyuan' && pipeline.type !== 'parakeet'
+	const usesVad = pipeline.type === 'parakeet' || pipeline.type === 'nemotron'
 
 	async function revealModel() {
 		if (path) await invoke('open_path', { path })
@@ -327,6 +328,10 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 							<p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
 								{m.modelSettingsNoOptions()} ({pipeline.engine})
 							</p>
+						)}
+
+						{usesVad && (
+							<p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{m.needsVadModel()}</p>
 						)}
 					</div>
 				)}

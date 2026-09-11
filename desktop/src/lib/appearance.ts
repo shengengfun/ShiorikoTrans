@@ -73,6 +73,249 @@ const ACCENT_VARS = ['--primary', '--ring', '--sidebar-primary', '--sidebar-ring
 
 export type ThemeScheme = 'light' | 'dark'
 
+/**
+ * Full neutral palette for one scheme. Only the "surface" variables are listed —
+ * accent variables stay untouched so the accent color can be layered on top of
+ * any palette (that's what makes dark mode work with every accent preset).
+ */
+export interface PaletteTokens {
+	background: string
+	foreground: string
+	card: string
+	cardForeground: string
+	popover: string
+	popoverForeground: string
+	secondary: string
+	secondaryForeground: string
+	muted: string
+	mutedForeground: string
+	accent: string
+	accentForeground: string
+	border: string
+	input: string
+	sidebar: string
+}
+
+export interface ThemePalette {
+	id: string
+	name: string
+	/** Swatch shown on the palette card (light bg, dark bg). */
+	previewLight: string
+	previewDark: string
+	light: PaletteTokens
+	dark: PaletteTokens
+}
+
+/** Palette ids that map 1:1 onto the CSS custom properties in globals.css. */
+const PALETTE_VARS: Record<keyof PaletteTokens, string> = {
+	background: '--background',
+	foreground: '--foreground',
+	card: '--card',
+	cardForeground: '--card-foreground',
+	popover: '--popover',
+	popoverForeground: '--popover-foreground',
+	secondary: '--secondary',
+	secondaryForeground: '--secondary-foreground',
+	muted: '--muted',
+	mutedForeground: '--muted-foreground',
+	accent: '--accent',
+	accentForeground: '--accent-foreground',
+	border: '--border',
+	input: '--input',
+	sidebar: '--sidebar',
+}
+
+/** Card/popover/sidebar keep an alpha channel so a custom background image shows through. */
+const soft = (hsl: string, alpha: number) => `${hsl} / ${alpha}`
+
+export const THEME_PALETTES: ThemePalette[] = [
+	{
+		id: 'default',
+		name: 'Default',
+		previewLight: 'hsl(210 34% 96%)',
+		previewDark: 'hsl(220 10% 10%)',
+		light: {} as PaletteTokens,
+		dark: {} as PaletteTokens,
+	},
+	{
+		id: 'midnight',
+		name: 'Midnight',
+		previewLight: 'hsl(210 40% 97%)',
+		previewDark: 'hsl(222 47% 8%)',
+		light: {
+			background: 'hsl(210 40% 97%)',
+			foreground: 'hsl(222 47% 16%)',
+			card: soft('hsl(0 0% 100%)', 0.95),
+			cardForeground: 'hsl(222 47% 16%)',
+			popover: soft('hsl(0 0% 100%)', 0.98),
+			popoverForeground: 'hsl(222 47% 16%)',
+			secondary: 'hsl(214 32% 93%)',
+			secondaryForeground: 'hsl(222 30% 24%)',
+			muted: 'hsl(214 32% 93%)',
+			mutedForeground: 'hsl(215 18% 44%)',
+			accent: 'hsl(214 40% 90%)',
+			accentForeground: 'hsl(222 30% 24%)',
+			border: 'hsl(214 25% 84%)',
+			input: 'hsl(214 25% 84%)',
+			sidebar: soft('hsl(0 0% 100%)', 0.9),
+		},
+		dark: {
+			background: 'hsl(222 47% 8%)',
+			foreground: 'hsl(210 40% 96%)',
+			card: soft('hsl(222 40% 12%)', 0.95),
+			cardForeground: 'hsl(210 40% 96%)',
+			popover: soft('hsl(222 40% 13%)', 0.98),
+			popoverForeground: 'hsl(210 40% 96%)',
+			secondary: 'hsl(222 30% 18%)',
+			secondaryForeground: 'hsl(210 30% 92%)',
+			muted: 'hsl(222 30% 17%)',
+			mutedForeground: 'hsl(215 20% 72%)',
+			accent: 'hsl(222 30% 22%)',
+			accentForeground: 'hsl(210 30% 92%)',
+			border: 'hsl(222 25% 26%)',
+			input: 'hsl(222 25% 26%)',
+			sidebar: soft('hsl(222 40% 11%)', 0.9),
+		},
+	},
+	{
+		id: 'nord',
+		name: 'Nord',
+		previewLight: 'hsl(218 27% 94%)',
+		previewDark: 'hsl(220 16% 22%)',
+		light: {
+			background: 'hsl(218 27% 94%)',
+			foreground: 'hsl(220 16% 24%)',
+			card: soft('hsl(0 0% 100%)', 0.95),
+			cardForeground: 'hsl(220 16% 24%)',
+			popover: soft('hsl(0 0% 100%)', 0.98),
+			popoverForeground: 'hsl(220 16% 24%)',
+			secondary: 'hsl(219 22% 91%)',
+			secondaryForeground: 'hsl(220 16% 26%)',
+			muted: 'hsl(219 22% 91%)',
+			mutedForeground: 'hsl(220 12% 45%)',
+			accent: 'hsl(219 28% 88%)',
+			accentForeground: 'hsl(220 16% 26%)',
+			border: 'hsl(219 20% 82%)',
+			input: 'hsl(219 20% 82%)',
+			sidebar: soft('hsl(0 0% 100%)', 0.9),
+		},
+		dark: {
+			background: 'hsl(220 16% 22%)',
+			foreground: 'hsl(218 27% 92%)',
+			card: soft('hsl(222 16% 26%)', 0.95),
+			cardForeground: 'hsl(218 27% 92%)',
+			popover: soft('hsl(222 16% 27%)', 0.98),
+			popoverForeground: 'hsl(218 27% 92%)',
+			secondary: 'hsl(222 14% 30%)',
+			secondaryForeground: 'hsl(218 27% 92%)',
+			muted: 'hsl(222 14% 29%)',
+			mutedForeground: 'hsl(219 15% 76%)',
+			accent: 'hsl(222 14% 33%)',
+			accentForeground: 'hsl(218 27% 92%)',
+			border: 'hsl(220 14% 38%)',
+			input: 'hsl(220 14% 38%)',
+			sidebar: soft('hsl(222 16% 25%)', 0.9),
+		},
+	},
+	{
+		id: 'warm',
+		name: 'Warm',
+		previewLight: 'hsl(38 60% 97%)',
+		previewDark: 'hsl(24 14% 9%)',
+		light: {
+			background: 'hsl(38 60% 97%)',
+			foreground: 'hsl(24 20% 18%)',
+			card: soft('hsl(40 60% 99%)', 0.95),
+			cardForeground: 'hsl(24 20% 18%)',
+			popover: soft('hsl(40 60% 99%)', 0.98),
+			popoverForeground: 'hsl(24 20% 18%)',
+			secondary: 'hsl(36 40% 93%)',
+			secondaryForeground: 'hsl(24 20% 22%)',
+			muted: 'hsl(36 40% 93%)',
+			mutedForeground: 'hsl(28 15% 42%)',
+			accent: 'hsl(34 50% 90%)',
+			accentForeground: 'hsl(24 20% 22%)',
+			border: 'hsl(34 30% 84%)',
+			input: 'hsl(34 30% 84%)',
+			sidebar: soft('hsl(40 60% 99%)', 0.9),
+		},
+		dark: {
+			background: 'hsl(24 14% 9%)',
+			foreground: 'hsl(34 30% 93%)',
+			card: soft('hsl(24 12% 13%)', 0.95),
+			cardForeground: 'hsl(34 30% 93%)',
+			popover: soft('hsl(24 12% 14%)', 0.98),
+			popoverForeground: 'hsl(34 30% 93%)',
+			secondary: 'hsl(24 10% 18%)',
+			secondaryForeground: 'hsl(34 22% 90%)',
+			muted: 'hsl(24 10% 17%)',
+			mutedForeground: 'hsl(30 14% 72%)',
+			accent: 'hsl(24 10% 22%)',
+			accentForeground: 'hsl(34 22% 90%)',
+			border: 'hsl(24 9% 27%)',
+			input: 'hsl(24 9% 27%)',
+			sidebar: soft('hsl(24 12% 12%)', 0.9),
+		},
+	},
+	{
+		id: 'ink',
+		name: 'Ink',
+		previewLight: 'hsl(0 0% 97%)',
+		previewDark: 'hsl(0 0% 4%)',
+		light: {
+			background: 'hsl(0 0% 97%)',
+			foreground: 'hsl(0 0% 12%)',
+			card: soft('hsl(0 0% 100%)', 0.95),
+			cardForeground: 'hsl(0 0% 12%)',
+			popover: soft('hsl(0 0% 100%)', 0.98),
+			popoverForeground: 'hsl(0 0% 12%)',
+			secondary: 'hsl(0 0% 94%)',
+			secondaryForeground: 'hsl(0 0% 18%)',
+			muted: 'hsl(0 0% 94%)',
+			mutedForeground: 'hsl(0 0% 42%)',
+			accent: 'hsl(0 0% 91%)',
+			accentForeground: 'hsl(0 0% 18%)',
+			border: 'hsl(0 0% 86%)',
+			input: 'hsl(0 0% 86%)',
+			sidebar: soft('hsl(0 0% 100%)', 0.9),
+		},
+		dark: {
+			background: 'hsl(0 0% 4%)',
+			foreground: 'hsl(0 0% 94%)',
+			card: soft('hsl(0 0% 9%)', 0.95),
+			cardForeground: 'hsl(0 0% 94%)',
+			popover: soft('hsl(0 0% 10%)', 0.98),
+			popoverForeground: 'hsl(0 0% 94%)',
+			secondary: 'hsl(0 0% 14%)',
+			secondaryForeground: 'hsl(0 0% 92%)',
+			muted: 'hsl(0 0% 13%)',
+			mutedForeground: 'hsl(0 0% 70%)',
+			accent: 'hsl(0 0% 18%)',
+			accentForeground: 'hsl(0 0% 92%)',
+			border: 'hsl(0 0% 22%)',
+			input: 'hsl(0 0% 22%)',
+			sidebar: soft('hsl(0 0% 7%)', 0.9),
+		},
+	},
+]
+
+export const DEFAULT_PALETTE_ID = 'default'
+
+/** Applies (or clears, for the default palette) a neutral palette on <html>. */
+export function applyThemePalette(paletteId: string, scheme: ThemeScheme) {
+	const el = document.documentElement
+	const palette = THEME_PALETTES.find((item) => item.id === paletteId)
+	if (!palette || palette.id === DEFAULT_PALETTE_ID) {
+		for (const cssVar of Object.values(PALETTE_VARS)) el.style.removeProperty(cssVar)
+		return
+	}
+	const tokens = scheme === 'dark' ? palette.dark : palette.light
+	for (const [key, cssVar] of Object.entries(PALETTE_VARS)) {
+		const value = tokens[key as keyof PaletteTokens]
+		if (value) el.style.setProperty(cssVar, value)
+	}
+}
+
 export interface ResolvedAccent {
 	light: { h: number; s: number; l: number }
 	dark: { h: number; s: number; l: number }

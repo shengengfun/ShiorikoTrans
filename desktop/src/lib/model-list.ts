@@ -59,7 +59,7 @@ export function useTranscriptionModels(refreshKey?: unknown) {
 	return { models, reload }
 }
 
-const GENERIC_FILENAMES = /^(ggml[-_])?model\.[a-z0-9]+$/i
+const GENERIC_FILENAMES = /^(ggml[-_])?(model|encoder|decoder|sense-voice-encoder)[._-]?[a-z0-9._-]*\.(onnx|bin|gguf)$/i
 
 /** Friendly name for a model entry: the folder name wins for folder-based models. */
 export function friendlyModelName(entry: Pick<ModelEntry, 'name' | 'file' | 'is_dir'>) {

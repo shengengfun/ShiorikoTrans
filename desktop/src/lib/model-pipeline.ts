@@ -1,4 +1,4 @@
-export type ModelType = 'whisper' | 'nemotron' | 'sensevoice' | 'hunyuan' | 'custom'
+export type ModelType = 'whisper' | 'nemotron' | 'sensevoice' | 'parakeet' | 'hunyuan' | 'custom'
 
 export interface ModelPipeline {
 	type: ModelType
@@ -37,6 +37,21 @@ export const MODEL_PIPELINES: Record<ModelType, ModelPipeline> = {
 		supportsWordTimestamps: false,
 		defaultThreads: 4,
 		defaultTemperature: 0.7,
+	},
+	parakeet: {
+		type: 'parakeet',
+		engine: 'parakeet',
+		// NVIDIA Parakeet TDT / Nemotron RNNT GGUF (multilingual, needs Silero VAD).
+		supportsGpu: true,
+		// The engine itself segments with VAD; the "stable timestamps" switch
+		// would just download another copy of the same helper model.
+		supportsVad: false,
+		supportsDiarization: false,
+		supportsStreaming: true,
+		supportsTranslation: false,
+		supportsWordTimestamps: false,
+		defaultThreads: 4,
+		defaultTemperature: 0.0,
 	},
 	sensevoice: {
 		type: 'sensevoice',
@@ -88,8 +103,9 @@ const WHISPER_KEYWORDS = [
 	'distil-whisper', 'distil-large', 'distil-medium', 'distil-small',
 	'faster-whisper', 'deepgram', 'turbo-', 'q5_0', 'q5_1', 'q8_0',
 ]
-const SENSEVOICE_KEYWORDS = ['sensevoice', 'sv-', 'funasr', 'paraformer']
+const SENSEVOICE_KEYWORDS = ['sensevoice', 'sense-voice', 'sv-', 'funasr', 'paraformer']
 const HUNYUAN_KEYWORDS = ['hunyuan', '混元']
+const PARAKEET_KEYWORDS = ['parakeet', 'tdt-', 'rnnt']
 const NEMOTRON_KEYWORDS = ['nemotron', 'nemo', 'llama', 'mistral', 'qwen', 'baichuan', 'chatglm', 'gemma']
 
 export function detectModelType(filename: string): ModelType {
@@ -105,12 +121,17 @@ export function detectModelType(filename: string): ModelType {
 		return 'hunyuan'
 	}
 
-	// 3. Nemotron（LLM 类，特异关键词）
+	// 3. Parakeet TDT / 其他 RNNT 模型（GGUF，自带 VAD 分段）
+	if (PARAKEET_KEYWORDS.some(keyword => lower.includes(keyword))) {
+		return 'parakeet'
+	}
+
+	// 4. Nemotron（LLM 类，特异关键词）
 	if (NEMOTRON_KEYWORDS.some(keyword => lower.includes(keyword))) {
 		return 'nemotron'
 	}
 
-	// 4. Whisper（最后判定，因为它包含了一些较通用的版本名）
+	// 5. Whisper（最后判定，因为它包含了一些较通用的版本名）
 	if (WHISPER_KEYWORDS.some(keyword => lower.includes(keyword))) {
 		return 'whisper'
 	}
@@ -132,6 +153,6 @@ export function getModelPipelineFromPath(modelPath: string): ModelPipeline {
 	const parts = modelPath.split(/[\\/]/).filter(Boolean)
 	const filename = parts[parts.length - 1] ?? ''
 	const parent = parts[parts.length - 2] ?? ''
-	const genericFile = /^(ggml[-_])?(model|encoder|decoder)\.[a-z0-9]+$/i.test(filename)
+	const genericFile = /^(ggml[-_])?(model|encoder|decoder|sense-voice-encoder)[._-]?[a-z0-9._-]*\.(onnx|bin|gguf)$/i.test(filename)
 	return getModelPipeline(genericFile && parent ? parent : filename)
 }
