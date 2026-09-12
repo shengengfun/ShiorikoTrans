@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import AudioVisualizer from './audio-visualizer'
 import ResummarizeDialog from '~/components/resummarize-dialog'
+import ModelChip from '~/components/model-chip'
 
 export default function Home() {
 	const vm = viewModel()
@@ -117,6 +118,10 @@ export default function Home() {
 							</TabsTrigger>
 						</TabsList>
 					</Tabs>
+
+					<div className="w-full min-w-0 max-w-3xl">
+						<ModelChip />
+					</div>
 
 					{vm.preference.homeTab === "record" && (
 						<div className="w-full min-w-0 max-w-2xl space-y-5">

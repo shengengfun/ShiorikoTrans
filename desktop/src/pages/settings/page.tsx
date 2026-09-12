@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react'
 import { m } from '~/paraglide/messages.js'
-import { Bot, Globe, Mic, Palette, SlidersHorizontal, Sparkles, Terminal, Wrench, X } from 'lucide-react'
+import { Bot, Globe, Languages, Mic, Palette, SlidersHorizontal, Sparkles, Terminal, Wrench, X } from 'lucide-react'
 import { ModifyState } from '~/lib/types'
 import { viewModel } from './view-model'
 import { Button } from '~/components/ui/button'
@@ -13,13 +13,14 @@ import { GpuSection } from './sections/gpu'
 import { ModelsSection } from './sections/models'
 import { SummarizeSection } from './sections/summarize'
 import { TranscriptionSection } from './sections/transcription'
+import { TranslationSection } from './sections/translation'
 
 interface SettingsPageProps {
 	setVisible: ModifyState<boolean>
 	scrollTo?: string
 }
 
-type SectionId = 'general' | 'appearance' | 'transcription' | 'models' | 'summarize' | 'dictation' | 'api' | 'advanced' | 'gpu'
+type SectionId = 'general' | 'appearance' | 'transcription' | 'models' | 'translation' | 'summarize' | 'dictation' | 'api' | 'advanced' | 'gpu'
 
 interface SettingsSection {
 	id: SectionId
@@ -46,6 +47,10 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 				{ id: 'transcription', label: m.transcription(), icon: <SlidersHorizontal className="h-4 w-4" /> },
 				{ id: 'models', label: m.selectModel(), icon: <Bot className="h-4 w-4" /> },
 			],
+		},
+		{
+			label: '翻译',
+			sections: [{ id: 'translation', label: '翻译', icon: <Languages className="h-4 w-4" /> }],
 		},
 		{
 			label: m.hardwareAcceleration(),
@@ -127,6 +132,8 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 					{activeSection === 'transcription' && <TranscriptionSection />}
 
 					{activeSection === 'models' && <ModelsSection vm={vm} />}
+
+					{activeSection === 'translation' && <TranslationSection />}
 
 					{activeSection === 'summarize' && <SummarizeSection vm={vm} />}
 

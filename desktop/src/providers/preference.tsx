@@ -79,6 +79,8 @@ export interface Preference {
 
 	llmConfig: LlmConfig
 	setLlmConfig: ModifyState<LlmConfig>
+	translationLlmConfig: LlmConfig
+	setTranslationLlmConfig: ModifyState<LlmConfig>
 	ffmpegOptions: FfmpegOptions
 	setFfmpegOptions: ModifyState<FfmpegOptions>
 	resetOptions: () => void
@@ -236,6 +238,7 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [storeRecordInDocuments, setStoreRecordInDocuments] = useLocalStorage('prefs_store_record_in_documents', defaultOptions.storeRecordInDocuments)
 	const [customRecordingPath, setCustomRecordingPath] = useLocalStorage<string | null>('prefs_custom_recording_path', null)
 	const [llmConfig, setLlmConfig] = useLocalStorage<LlmConfig>('prefs_llm_config', defaultOptions.llmConfig)
+	const [translationLlmConfig, setTranslationLlmConfig] = useLocalStorage<LlmConfig>('prefs_translation_llm_config', defaultOptions.llmConfig)
 	const [ytDlpVersion, setYtDlpVersion] = useLocalStorage<string | null>('prefs_ytdlp_version', null)
 	const [shouldCheckYtDlpVersion, setShouldCheckYtDlpVersion] = useLocalStorage<boolean>('prefs_should_check_ytdlp_version', true)
 	const [advancedTranscribeOptions, setAdvancedTranscribeOptions] = useLocalStorage<AdvancedTranscribeOptions>('prefs_advanced_transcribe_options', {
@@ -398,8 +401,10 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const preference: Preference = {
 		enableSubtitlesPreset,
 		llmConfig,
+		translationLlmConfig,
 		resetOptions,
 		setLlmConfig,
+		setTranslationLlmConfig,
 		setLanguageDirections: setLanguageDefaults,
 		modelOptions,
 		setModelOptions,

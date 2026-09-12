@@ -13,7 +13,8 @@ import { Label } from '~/components/ui/label'
 import { Progress } from '~/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { SectionCard, type SettingsViewModel } from './shared'
-import { getFriendlyModelName, installCatalogModel, isCatalogModelInstalled } from '~/lib/model'
+import { getFriendlyModelName, isCatalogModelInstalled } from '~/lib/model'
+import { useModelDownload } from '~/lib/model-download'
 import { CATALOG_GROUPS, type CatalogGroup, type CatalogModel } from '~/lib/model-catalog'
 import { detectModelType, MODEL_PIPELINES, type ModelType } from '~/lib/model-pipeline'
 import { cn } from '~/lib/style'
@@ -63,6 +64,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 	// models) starts expanded so the usual choice is one click away.
 	const [expanded, setExpanded] = useState<Record<string, boolean>>({ nvidia: true })
 	const currentModel = vm.models.find((model) => model.path === vm.preference.modelPath)
+	const { downloadCatalogModel } = useModelDownload()
 
 	// Live progress bar for catalog downloads (the Rust side emits `download_progress`).
 	useEffect(() => {
@@ -90,7 +92,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 		setInstallingId(entry.id)
 		setInstallProgress(0)
 		try {
-			const path = await installCatalogModel(entry)
+			const path = await downloadCatalogModel(entry)
 			if (path) {
 				toast.success(m.downloadComplete())
 				await refreshInstalled()

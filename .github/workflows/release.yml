@@ -4,7 +4,7 @@ on:
     workflow_dispatch:
         inputs:
             sign-windows:
-                description: 'Sign Windows binaries via remote YubiKey'
+                description: 'Sign the Windows installer with SignPath Foundation'
                 type: boolean
                 default: false
             sign-macos:
@@ -17,6 +17,7 @@ jobs:
         timeout-minutes: 120
         permissions:
             contents: write
+            actions: read
         strategy:
             fail-fast: false
             matrix:
@@ -33,10 +34,6 @@ jobs:
                     - platform: "ubuntu-22.04-arm"
                       args: "--target aarch64-unknown-linux-gnu"
                       target_triple: "aarch64-unknown-linux-gnu"
-                    - platform: "windows-latest"
-                      args: "--target x86_64-pc-windows-msvc"
-                      target_triple: "x86_64-pc-windows-msvc"
-
         runs-on: ${{ matrix.platform }}
         steps:
             - uses: actions/checkout@v4
@@ -105,10 +102,6 @@ jobs:
                   # Analytics (Aptabase)
                   APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
                   APTABASE_BASE_URL: ${{ secrets.APTABASE_BASE_URL }}
-                  # Windows signing (remote YubiKey sign server)
-                  SIGN_ENABLED: ${{ matrix.platform == 'windows-latest' && inputs.sign-windows && 'true' || 'false' }}
-                  SIGN_TUNNEL_URL: ${{ secrets.SIGN_TUNNEL_URL }}
-                  SIGN_TUNNEL_SECRET: ${{ secrets.SIGN_TUNNEL_SECRET }}
               with:
                   tagName: v__VERSION__ # the action automatically replaces __VERSION__ with the app version.
                   releaseName: "v__VERSION__"
@@ -116,6 +109,125 @@ jobs:
                   releaseBody: ${{ steps.notes.outputs.body }}
                   # 只有带 "-" 的 tag（如 v1.1.0-beta.1）才算预发布，否则 /releases/latest 会跳过它
                   prerelease: ${{ contains(github.ref_name, '-') }}
-                  args: ${{ matrix.args }} ${{ matrix.platform == 'windows-latest' && inputs.sign-windows && '--config src-tauri/tauri.windows.signing.conf.json' || '' }}
+                  args: ${{ matrix.args }}
                   projectPath: "./desktop"
                   tauriScript: pnpm exec tauri
+
+    publish-windows:
+        needs: publish-tauri
+        runs-on: windows-latest
+        timeout-minutes: 120
+        permissions:
+            actions: read
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  package_json_file: desktop/package.json
+
+            - name: setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
+                  cache-dependency-path: desktop/pnpm-lock.yaml
+
+            - name: setup uv
+              uses: astral-sh/setup-uv@v5
+
+            - name: Rust cache
+              uses: swatinem/rust-cache@v2
+
+            - name: Install Rust stable
+              uses: dtolnay/rust-toolchain@stable
+
+            - name: Install frontend dependencies
+              run: pnpm install
+              working-directory: ./desktop
+
+            - name: Run pre_build.py
+              run: uv run scripts/pre_build.py --target x86_64-pc-windows-msvc
+
+            # Do not give tauri-action a tag here: the cross-platform job has
+            # already created the release, and Windows must be signed first.
+            - name: Build unsigned Windows installer
+              uses: tauri-apps/tauri-action@v0
+              env:
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+                  APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
+                  APTABASE_BASE_URL: ${{ secrets.APTABASE_BASE_URL }}
+              with:
+                  args: --target x86_64-pc-windows-msvc --bundles nsis
+                  projectPath: "./desktop"
+                  tauriScript: pnpm exec tauri
+
+            - name: Locate installer
+              id: installer
+              shell: pwsh
+              run: |
+                  $path = Get-ChildItem "target/release/bundle/nsis/*-setup.exe" | Select-Object -First 1 -ExpandProperty FullName
+                  if (-not $path) { throw "NSIS installer was not produced" }
+                  "path=$path" >> $env:GITHUB_OUTPUT
+                  "name=$(Split-Path $path -Leaf)" >> $env:GITHUB_OUTPUT
+
+            # SignPath verifies this GitHub-hosted build through the artifact ID.
+            # The SignPath artifact configuration must be a ZIP containing the
+            # NSIS PE file; see docs/code-signing/signpath.md.
+            - name: Upload unsigned installer for SignPath
+              if: inputs.sign-windows
+              id: upload-unsigned
+              uses: actions/upload-artifact@v4
+              with:
+                  name: shiorikotrans-windows-unsigned
+                  path: ${{ steps.installer.outputs.path }}
+                  if-no-files-found: error
+                  retention-days: 3
+
+            - name: Submit SignPath signing request
+              if: inputs.sign-windows
+              uses: signpath/github-action-submit-signing-request@v2
+              with:
+                  api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+                  organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+                  project-slug: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+                  signing-policy-slug: ${{ secrets.SIGNPATH_SIGNING_POLICY_SLUG }}
+                  artifact-configuration-slug: ${{ secrets.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+                  github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+                  wait-for-completion: true
+                  output-artifact-directory: signed-windows
+
+            - name: Select release installer
+              id: release-installer
+              shell: pwsh
+              env:
+                  SIGN_WINDOWS: ${{ inputs.sign-windows }}
+                  UNSIGNED_PATH: ${{ steps.installer.outputs.path }}
+                  INSTALLER_NAME: ${{ steps.installer.outputs.name }}
+              run: |
+                  if ($env:SIGN_WINDOWS -eq "true") {
+                    $path = Get-ChildItem "signed-windows" -Filter $env:INSTALLER_NAME -Recurse | Select-Object -First 1 -ExpandProperty FullName
+                    if (-not $path) { throw "SignPath did not return the signed installer" }
+                  } else {
+                    $path = $env:UNSIGNED_PATH
+                  }
+                  "path=$path" >> $env:GITHUB_OUTPUT
+
+            - name: Verify Authenticode signature
+              if: inputs.sign-windows
+              shell: pwsh
+              run: |
+                  $signature = Get-AuthenticodeSignature "${{ steps.release-installer.outputs.path }}"
+                  $signature | Format-List Status, StatusMessage, SignerCertificate
+                  if ($signature.Status -ne "Valid") { throw "Invalid Authenticode signature: $($signature.Status)" }
+
+            - name: Upload Windows installer to release
+              shell: pwsh
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  $version = (Get-Content "desktop/src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json).version
+                  gh release upload "v$version" "${{ steps.release-installer.outputs.path }}" --clobber

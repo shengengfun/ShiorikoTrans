@@ -1,6 +1,6 @@
 [package]
 name = "shiorikotrans"
-version = "1.0.5"
+version = "1.0.6"
 description = "ShiorikoTrans - Transcribe audio and video on your device"
 authors = ["ShiorikoTrans Team"]
 license = "MIT"

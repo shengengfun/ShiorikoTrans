@@ -1,16 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { listen } from '@tauri-apps/api/event'
 import { platform } from '@tauri-apps/plugin-os'
-import { Bot, History, Languages, ListVideo, Minus, Settings2, Square, X } from 'lucide-react'
+import { Bot, History, Languages, ListVideo, Minus, Replace, Search, Settings2, Square, X } from 'lucide-react'
 import { m } from '~/paraglide/messages.js'
 import { usePreferenceProvider, type RecentFile } from '~/providers/preference'
 import { useFilesContext } from '~/providers/files-provider'
+import { useTranscriptionProvider } from '~/providers/transcription'
+import { useTranslationSession } from '~/providers/translation'
 import { modelDisplayName, modelNameFromPath, useTranscriptionModels, type ModelEntry } from '~/lib/model-list'
 import { openModelSettings } from '~/lib/app'
 import { cn } from '~/lib/style'
 import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -29,6 +33,13 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 	const location = useLocation()
 	const prefs = usePreferenceProvider()
 	const { setFiles } = useFilesContext()
+	const { segments, setSegments, translatedSegments, setTranslatedSegments, summarizeSegments, setSummarizeSegments } = useTranscriptionProvider()
+	const { source, setSource, output, setOutput } = useTranslationSession()
+	const [searchOpen, setSearchOpen] = useState(false)
+	const [showReplace, setShowReplace] = useState(false)
+	const [query, setQuery] = useState('')
+	const [replacement, setReplacement] = useState('')
+	const searchInputRef = useRef<HTMLInputElement>(null)
 	const [isWindows] = useState(() => {
 		try {
 			return platform() === 'windows'
@@ -93,6 +104,44 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 			? prefs.modelDisplayNames[prefs.modelPath] ?? modelNameFromPath(prefs.modelPath)
 			: m.selectModel()
 	const recent = [...prefs.recentFiles].sort((a, b) => b.ts - a.ts)
+	const searchableText = [
+		...(segments?.map((segment) => segment.text) ?? []),
+		...(translatedSegments?.map((segment) => segment.text) ?? []),
+		...(summarizeSegments?.map((segment) => segment.text) ?? []),
+		source,
+		output,
+	].join('\n')
+	const matches = query.trim() ? searchableText.match(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'))?.length ?? 0 : 0
+
+	function replaceText(text: string) {
+		if (!query) return text
+		return text.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), replacement)
+	}
+
+	function replaceAll() {
+		if (!query) return
+		setSegments((current) => current?.map((segment) => ({ ...segment, text: replaceText(segment.text) })) ?? null)
+		setTranslatedSegments((current) => current?.map((segment) => ({ ...segment, text: replaceText(segment.text) })) ?? null)
+		setSummarizeSegments((current) => current?.map((segment) => ({ ...segment, text: replaceText(segment.text) })) ?? null)
+		setSource((current) => replaceText(current))
+		setOutput((current) => replaceText(current))
+	}
+
+	useEffect(() => {
+		function handleShortcut(event: KeyboardEvent) {
+			if (!(event.ctrlKey || event.metaKey) || (event.key.toLowerCase() !== 'f' && event.key.toLowerCase() !== 'h')) return
+			event.preventDefault()
+			setShowReplace(event.key.toLowerCase() === 'h')
+			setSearchOpen(true)
+		}
+		window.addEventListener('keydown', handleShortcut)
+		return () => window.removeEventListener('keydown', handleShortcut)
+	}, [])
+
+	useEffect(() => {
+		if (!searchOpen) return
+		window.requestAnimationFrame(() => searchInputRef.current?.focus())
+	}, [searchOpen])
 
 	return (
 		<header
@@ -129,6 +178,19 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 			</div>
 
 			<div data-tauri-drag-region className="min-w-2 flex-1" />
+
+			<Popover open={searchOpen} onOpenChange={setSearchOpen}>
+				<PopoverTrigger asChild>
+					<Button variant="ghost" size="icon" className="rounded-lg" aria-label="搜索与替换" title="搜索与替换 (Ctrl+F / Ctrl+H)">
+						<Search className="h-4 w-4" />
+					</Button>
+				</PopoverTrigger>
+				<PopoverContent align="end" className="w-80 space-y-2 p-3">
+					<div className="flex items-center gap-2"><Search className="h-4 w-4 text-muted-foreground" /><Input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索转录与翻译" /><span className="shrink-0 text-xs text-muted-foreground">{matches}</span></div>
+					{showReplace && <div className="flex items-center gap-2"><Replace className="h-4 w-4 text-muted-foreground" /><Input value={replacement} onChange={(event) => setReplacement(event.target.value)} placeholder="替换为" /></div>}
+					<div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={() => setShowReplace((visible) => !visible)}>{showReplace ? '隐藏替换' : '替换'}</Button>{showReplace && <Button size="sm" disabled={!query || matches === 0} onClick={replaceAll}>全部替换</Button>}</div>
+				</PopoverContent>
+			</Popover>
 
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>

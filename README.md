@@ -62,6 +62,10 @@
 >
 > 首次转写前请在 **设置 → 模型** 里下载一个识别模型（推荐 **Large v3 Turbo**），没有模型时启动向导会提示下载。
 
+Windows 安装包使用 [SignPath Foundation](https://signpath.org/) 提供的免费开源代码签名服务，并由
+[SignPath.io](https://signpath.io/) 执行签名。签名接入与可复现构建流程见
+[docs/code-signing/signpath.md](docs/code-signing/signpath.md)。
+
 # 功能特性 🌟
 
 ## 转写

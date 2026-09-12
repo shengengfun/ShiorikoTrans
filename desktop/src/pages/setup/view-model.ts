@@ -2,9 +2,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { emit, listen } from '@tauri-apps/api/event'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { m } from '~/paraglide/messages.js'
 import { ErrorModalContext } from '~/providers/error-modal'
 import { usePreferenceProvider } from '~/providers/preference'
 import * as utils from '~/lib/model'
+import { useModelDownload } from '~/lib/model-download'
 import type { CatalogModel } from '~/lib/model-catalog'
 import * as osExt from '@tauri-apps/plugin-os'
 import { resolveAuxModelPath } from '~/lib/model-paths'
@@ -20,6 +22,7 @@ export function viewModel() {
 	const { setState: setErrorModal } = useContext(ErrorModalContext)
 	const navigate = useNavigate()
 	const preference = usePreferenceProvider()
+	const { downloadCatalogModel, withProgress } = useModelDownload()
 
 	function handleProgressEvenets() {
 		listen('download_progress', (event) => {
@@ -54,7 +57,7 @@ export function viewModel() {
 			kind: 'info',
 		})
 		if (!confirmed) return false
-		await invoke('download_model', { url: config.vadModelUrl, path: vadPath })
+		await withProgress(m.downloadingVadModel() as string, () => invoke('download_model', { url: config.vadModelUrl, path: vadPath }))
 		return true
 	}
 
@@ -93,7 +96,7 @@ export function viewModel() {
 			for (const url of urls) {
 				try {
 					console.log(`[model] Attempting to download from: ${url}`)
-					const path = await utils.downloadModel(url)
+					const path = await withProgress(m.downloadingModel() as string, () => utils.downloadModel(url))
 					if (!path) {
 						console.log('[model] Download cancelled')
 						return
@@ -139,7 +142,7 @@ export function viewModel() {
 	/** One-click install of a curated catalog model (e.g. Parakeet / Whisper turbo). */
 	async function installFromCatalog(entry: CatalogModel) {
 		handleProgressEvenets()
-		const path = await utils.installCatalogModel(entry)
+		const path = await downloadCatalogModel(entry)
 		if (!path) return
 		if (await selectDownloadedModel(path)) {
 			navigate('/', { replace: true, state: { disableBack: true } })

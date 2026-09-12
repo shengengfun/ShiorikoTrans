@@ -26,6 +26,9 @@ function parseIntOr(value: string, fallback: number) {
 	return Number.isNaN(n) ? fallback : n
 }
 
+/** Numeric fields only ever hold a small integer / ratio — keep them compact. */
+const NUMBER_INPUT = 'h-9 max-w-[9.5rem] tabular-nums'
+
 const TRANSLATE_OPTIONS = [
 	{ value: 'none', label: 'None' },
 	{ value: 'en', label: 'English' },
@@ -66,8 +69,15 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 	const options = preference.modelOptions
 	const setOptions = preference.setModelOptions
 	// Menus are generated from the engine descriptor, so a new engine only needs
-	// its capability flags in `model-pipeline.ts`.
-	const hasDecodingParams = pipeline.supportsTemperature || pipeline.supportsMaxTextCtx || pipeline.supportsWordTimestamps
+	// its capability flags in `model-pipeline.ts`. The thread count is accepted by
+	// every engine, so the model-options card is always rendered.
+	const hasEngineOptions =
+		pipeline.supportsTemperature ||
+		pipeline.supportsMaxTextCtx ||
+		pipeline.supportsWordTimestamps ||
+		pipeline.supportsSampling ||
+		pipeline.supportsPrompt ||
+		pipeline.supportsTranslation
 
 	async function revealModel() {
 		if (path) await invoke('open_path', { path })
@@ -108,167 +118,175 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 							</Button>
 						</div>
 
-						{hasDecodingParams && (
-							<>
-								<div className="space-y-3">
-									<span className="px-1 text-sm font-semibold text-foreground/95">{m.modelOptions()}</span>
-									<div className="grid grid-cols-2 gap-4 rounded-xl border border-border/60 p-4">
-										<div className="space-y-2">
-											<Label className="flex items-center gap-1">
-												<InfoTooltip text={m.infoThreads()} />
-												{m.threads()}
-											</Label>
-											<Input
-												type="number"
-												value={options.n_threads}
-												onChange={(event) => setOptions({ ...options, n_threads: parseIntOr(event.target.value, 1) })}
-											/>
-										</div>
-										{pipeline.supportsTemperature && (
-											<div className="space-y-2">
-												<Label className="flex items-center gap-1">
-													<InfoTooltip text={m.infoTemperature()} />
-													{m.temperature()}
-												</Label>
-												<Input
-													type="number"
-													step={0.1}
-													value={options.temperature}
-													onChange={(event) => setOptions({ ...options, temperature: parseFloat(event.target.value) || 0 })}
-												/>
-											</div>
-										)}
-										{pipeline.supportsMaxTextCtx && (
-											<div className="space-y-2">
-												<Label className="flex items-center gap-1">
-													<InfoTooltip text={m.infoMaxTextCtx()} />
-													{m.maxTextCtx()}
-												</Label>
-												<Input
-													type="number"
-													step={1}
-													value={options.max_text_ctx ?? 0}
-													onChange={(event) => setOptions({ ...options, max_text_ctx: parseIntOr(event.target.value, 0) })}
-												/>
-											</div>
-										)}
-										{pipeline.supportsWordTimestamps && (
-											<div className="space-y-2">
-												<Label className="flex items-center gap-1">
-													<InfoTooltip text={m.infoMaxSentenceLen()} />
-													{m.maxSentenceLen()}
-												</Label>
-												<Input
-													type="number"
-													value={options.max_sentence_len}
-													onChange={(event) => setOptions({ ...options, max_sentence_len: parseIntOr(event.target.value, 1) })}
-												/>
-											</div>
-										)}
-									</div>
+						<div className="space-y-3">
+							<span className="px-1 text-sm font-semibold text-foreground/95">{m.modelOptions()}</span>
+							<div className="space-y-4 rounded-xl border border-border/60 p-4">
+								<div className="space-y-2">
+									<Label className="flex items-center gap-1">
+										<InfoTooltip text={m.infoThreads()} />
+										{m.threads()}
+									</Label>
+									<Input
+										type="number"
+										className={NUMBER_INPUT}
+										value={options.n_threads}
+										onChange={(event) => setOptions({ ...options, n_threads: parseIntOr(event.target.value, 1) })}
+									/>
 								</div>
-
-								{pipeline.supportsTranslation && (
-									<div className="space-y-3">
-										<span className="px-1 text-sm font-semibold text-foreground/95">{m.translateToEnglish()}</span>
-										<div className="space-y-2 rounded-xl border border-border/60 p-4">
-											<Label className="flex items-center gap-1">
-												<InfoTooltip text={m.infoTranslateToEnglish()} />
-												{m.translateToEnglish()}
-											</Label>
-											<Select value={options.translate} onValueChange={(value) => setOptions({ ...options, translate: value })}>
-												<SelectTrigger className="capitalize">
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													{TRANSLATE_OPTIONS.map((option) => (
-														<SelectItem key={option.value} value={option.value}>
-															{option.label}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											{options.translate !== 'none' && (
-												<p className="text-xs italic text-muted-foreground">{m.translateWhisperModelNote()}</p>
-											)}
-										</div>
-									</div>
+								{!hasEngineOptions && (
+									<p className="text-xs text-muted-foreground">
+										{m.modelSettingsNoOptions()} ({pipeline.engine})
+									</p>
 								)}
-
-								{pipeline.supportsWordTimestamps && (
-									<div className="space-y-3">
-										<span className="px-1 text-sm font-semibold text-foreground/95">{m.useWordTimestamps()}</span>
-										<div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 p-4">
-											<span className="flex items-center gap-1 text-sm font-medium">
-												<InfoTooltip text={m.infoUseWordTimestamps()} />
-												{m.useWordTimestamps()}
-											</span>
-											<Switch
-												checked={Boolean(options.word_timestamps)}
-												onCheckedChange={(checked) => setOptions({ ...options, word_timestamps: checked })}
-											/>
-										</div>
-									</div>
-								)}
-
-								{pipeline.supportsSampling && (
-									<div className="space-y-3">
-										<span className="px-1 text-sm font-semibold text-foreground/95">{m.samplingStrategy()}</span>
-									<div className="grid grid-cols-2 gap-4 rounded-xl border border-border/60 p-4">
+								<div className="grid grid-cols-2 gap-x-6 gap-y-4">
+									{pipeline.supportsTemperature && (
 										<div className="space-y-2">
 											<Label className="flex items-center gap-1">
-												<InfoTooltip text={m.samplingStrategyInfo()} />
-												{m.samplingStrategy()}
+												<InfoTooltip text={m.infoTemperature()} />
+												{m.temperature()}
 											</Label>
-											<Select
-												value={options.sampling_strategy}
-												onValueChange={(value) => setOptions({ ...options, sampling_strategy: value as 'greedy' | 'beam search' })}>
-												<SelectTrigger className="capitalize">
-													<SelectValue />
-												</SelectTrigger>
-												<SelectContent>
-													{['beam search', 'greedy'].map((strategy) => (
-														<SelectItem key={strategy} value={strategy} className="capitalize">
-															{strategy}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</div>
-										<div className="space-y-2">
-											<Label>{options.sampling_strategy === 'greedy' ? 'Best of' : 'Beam size'}</Label>
 											<Input
 												type="number"
+												className={NUMBER_INPUT}
+												step={0.1}
+												value={options.temperature}
+												onChange={(event) => setOptions({ ...options, temperature: parseFloat(event.target.value) || 0 })}
+											/>
+										</div>
+									)}
+									{pipeline.supportsMaxTextCtx && (
+										<div className="space-y-2">
+											<Label className="flex items-center gap-1">
+												<InfoTooltip text={m.infoMaxTextCtx()} />
+												{m.maxTextCtx()}
+											</Label>
+											<Input
+												type="number"
+												className={NUMBER_INPUT}
 												step={1}
-												value={options.sampling_strategy === 'greedy' ? (options.best_of ?? 5) : (options.beam_size ?? 5)}
-												onChange={(event) => {
-													const value = parseIntOr(event.target.value, 5)
-													if (options.sampling_strategy === 'greedy') setOptions({ ...options, best_of: value })
-													else setOptions({ ...options, beam_size: value })
-												}}
+												value={options.max_text_ctx ?? 0}
+												onChange={(event) => setOptions({ ...options, max_text_ctx: parseIntOr(event.target.value, 0) })}
 											/>
 										</div>
+									)}
+									{pipeline.supportsWordTimestamps && (
+										<div className="space-y-2">
+											<Label className="flex items-center gap-1">
+												<InfoTooltip text={m.infoMaxSentenceLen()} />
+												{m.maxSentenceLen()}
+											</Label>
+											<Input
+												type="number"
+												className={NUMBER_INPUT}
+												value={options.max_sentence_len}
+												onChange={(event) => setOptions({ ...options, max_sentence_len: parseIntOr(event.target.value, 1) })}
+											/>
+										</div>
+									)}
+								</div>
+							</div>
+						</div>
+
+						{pipeline.supportsTranslation && (
+							<div className="space-y-3">
+								<span className="px-1 text-sm font-semibold text-foreground/95">{m.translateToEnglish()}</span>
+								<div className="space-y-2 rounded-xl border border-border/60 p-4">
+									<Label className="flex items-center gap-1">
+										<InfoTooltip text={m.infoTranslateToEnglish()} />
+										{m.translateToEnglish()}
+									</Label>
+									<Select value={options.translate} onValueChange={(value) => setOptions({ ...options, translate: value })}>
+										<SelectTrigger className="capitalize">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{TRANSLATE_OPTIONS.map((option) => (
+												<SelectItem key={option.value} value={option.value}>
+													{option.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									{options.translate !== 'none' && (
+										<p className="text-xs italic text-muted-foreground">{m.translateWhisperModelNote()}</p>
+									)}
+								</div>
+							</div>
+						)}
+
+						{pipeline.supportsWordTimestamps && (
+							<div className="space-y-3">
+								<span className="px-1 text-sm font-semibold text-foreground/95">{m.useWordTimestamps()}</span>
+								<div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 p-4">
+									<span className="flex items-center gap-1 text-sm font-medium">
+										<InfoTooltip text={m.infoUseWordTimestamps()} />
+										{m.useWordTimestamps()}
+									</span>
+									<Switch
+										checked={Boolean(options.word_timestamps)}
+										onCheckedChange={(checked) => setOptions({ ...options, word_timestamps: checked })}
+									/>
+								</div>
+							</div>
+						)}
+
+						{pipeline.supportsSampling && (
+							<div className="space-y-3">
+								<span className="px-1 text-sm font-semibold text-foreground/95">{m.samplingStrategy()}</span>
+								<div className="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-border/60 p-4">
+									<div className="space-y-2">
+										<Label className="flex items-center gap-1">
+											<InfoTooltip text={m.samplingStrategyInfo()} />
+											{m.samplingStrategy()}
+										</Label>
+										<Select
+											value={options.sampling_strategy}
+											onValueChange={(value) => setOptions({ ...options, sampling_strategy: value as 'greedy' | 'beam search' })}>
+											<SelectTrigger className="capitalize">
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												{['beam search', 'greedy'].map((strategy) => (
+													<SelectItem key={strategy} value={strategy} className="capitalize">
+														{strategy}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+									<div className="space-y-2">
+										<Label>{options.sampling_strategy === 'greedy' ? 'Best of' : 'Beam size'}</Label>
+										<Input
+											type="number"
+											className={NUMBER_INPUT}
+											step={1}
+											value={options.sampling_strategy === 'greedy' ? (options.best_of ?? 5) : (options.beam_size ?? 5)}
+											onChange={(event) => {
+												const value = parseIntOr(event.target.value, 5)
+												if (options.sampling_strategy === 'greedy') setOptions({ ...options, best_of: value })
+												else setOptions({ ...options, beam_size: value })
+											}}
+										/>
 									</div>
 								</div>
-								)}
+							</div>
+						)}
 
-								{pipeline.supportsPrompt && (
-									<div className="space-y-3">
-										<span className="px-1 text-sm font-semibold text-foreground/95">{m.prompt()}</span>
-										<div className="space-y-2 rounded-xl border border-border/60 p-4">
-											<Label className="flex items-center gap-1">
-												<InfoTooltip text={m.infoPrompt()} />
-												{m.prompt()} ({m.leftover()} {1024 - (options?.init_prompt?.length ?? 0)} {m.characters()})
-											</Label>
-											<Textarea
-												value={options?.init_prompt}
-												onChange={(event) => setOptions({ ...options, init_prompt: event.target.value.slice(0, 1024) })}
-												className="min-h-[80px]"
-											/>
-										</div>
-									</div>
-								)}
-							</>
+						{pipeline.supportsPrompt && (
+							<div className="space-y-3">
+								<span className="px-1 text-sm font-semibold text-foreground/95">{m.prompt()}</span>
+								<div className="space-y-2 rounded-xl border border-border/60 p-4">
+									<Label className="flex items-center gap-1">
+										<InfoTooltip text={m.infoPrompt()} />
+										{m.prompt()} ({m.leftover()} {1024 - (options?.init_prompt?.length ?? 0)} {m.characters()})
+									</Label>
+									<Textarea
+										value={options?.init_prompt}
+										onChange={(event) => setOptions({ ...options, init_prompt: event.target.value.slice(0, 1024) })}
+										className="min-h-20"
+									/>
+								</div>
+							</div>
 						)}
 
 						<div className="space-y-3">
@@ -328,12 +346,6 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 								</div>
 							</div>
 						</div>
-
-						{!hasDecodingParams && (
-							<p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-								{m.modelSettingsNoOptions()} ({pipeline.engine})
-							</p>
-						)}
 
 						{pipeline.requiresVad && (
 							<p className="rounded-xl bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{m.needsVadModel()}</p>

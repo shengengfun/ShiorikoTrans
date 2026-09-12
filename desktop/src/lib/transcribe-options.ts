@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import * as fs from '@tauri-apps/plugin-fs'
 import { toast } from 'sonner'
 import { m } from '~/paraglide/messages.js'
@@ -78,8 +79,28 @@ export async function prepareTranscribeOptions(input: PrepareTranscribeInput): P
 	const vadModel = (stableTimestamps || requiresVad) && modelsFolder ? await resolveAuxModelPath(modelsFolder, 'vad', config.vadModelFilename) : undefined
 
 	if (vadModel && !(await fs.exists(vadModel))) {
-		toast.info(m.downloadingVadModel(), { position: 'bottom-center' })
-		await invoke('download_model', { url: config.vadModelUrl, path: vadModel })
+		// Same progress popup as the diarization download, so an on-demand helper
+		// model download is never invisible.
+		const toastId = toast.loading(m.downloadingVadModel() as string, { description: '0%', duration: Infinity })
+		const unlisten = await listen<[number, number]>('download_progress', (event) => {
+			const [current, total] = event.payload
+			if (total > 0) {
+				toast.loading(m.downloadingVadModel() as string, {
+					id: toastId,
+					description: `${Math.round((current / total) * 100)}%`,
+					duration: Infinity,
+				})
+			}
+		})
+		try {
+			await invoke('download_model', { url: config.vadModelUrl, path: vadModel })
+			toast.success(m.downloadComplete() as string, { id: toastId })
+		} catch (error) {
+			toast.dismiss(toastId)
+			throw error
+		} finally {
+			unlisten()
+		}
 	}
 
 	const options: TranscribeRequestOptions = {

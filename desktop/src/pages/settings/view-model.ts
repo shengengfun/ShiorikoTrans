@@ -300,7 +300,7 @@ export function viewModel() {
 		})
 		if (!confirmed) return false
 
-		progressToast.setMessage('Downloading Silero VAD model…')
+		progressToast.setMessage(m.downloadingVadModel() as string)
 		progressToast.setOpen(true)
 		progressToast.setProgress(0)
 		try {
