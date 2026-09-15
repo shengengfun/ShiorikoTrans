@@ -108,16 +108,35 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 	// the transcription page is unmounted.
 	useEffect(() => {
 		const unlisteners: Promise<UnlistenFn>[] = []
+		// Segments arrive one event at a time (hundreds for a long file). Applying
+		// each event immediately re-renders the whole transcription subtree and used
+		// to starve the UI thread — the window then ignored clicks (minimize/save).
+		// Buffer them and flush in batches instead.
+		const pending: transcript.Segment[] = []
+		let flushTimer: number | null = null
+		const flush = () => {
+			flushTimer = null
+			if (pending.length === 0) return
+			const batch = pending.splice(0, pending.length)
+			setSegments((prev) => (prev ? [...prev, ...batch] : batch))
+		}
+		const scheduleFlush = () => {
+			if (flushTimer != null) return
+			flushTimer = window.setTimeout(flush, 120)
+		}
+
 		unlisteners.push(
 			listen('transcribe_progress', (event) => {
-				const value = event.payload as number
-				if (value >= 0 && value <= 100) setProgress(value)
+				const value = Math.round(event.payload as number)
+				if (value < 0 || value > 100) return
+				// Bail out when the percentage didn't change to avoid a re-render.
+				setProgress((prev) => (prev === value ? prev : value))
 			}),
 		)
 		unlisteners.push(
 			listen<transcript.Segment>('new_segment', (event) => {
-				const { payload } = event
-				setSegments((prev) => (prev ? [...prev, payload] : [payload]))
+				pending.push(event.payload)
+				scheduleFlush()
 			}),
 		)
 		unlisteners.push(
@@ -143,6 +162,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 			}),
 		)
 		return () => {
+			if (flushTimer != null) window.clearTimeout(flushTimer)
 			unlisteners.forEach((promise) => promise.then((unlisten) => unlisten()))
 		}
 	}, [navigate, setFiles, setProgress, setSegments])

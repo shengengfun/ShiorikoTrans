@@ -15,11 +15,13 @@ export interface LlmConfig {
 	claudeApiKey: string
 	model: string
 	maxTokens?: number
+	/** Optional sampling temperature (used by OpenAI-compatible and Claude). */
+	temperature?: number
 
 	// Ollama
 	ollamaBaseUrl: string
 
-	// OpenAI Compatible
+	// OpenAI Compatible (also used for local servers: llama.cpp / LM Studio / vLLM)
 	openaiBaseUrl?: string
 	openaiApiKey?: string
 }

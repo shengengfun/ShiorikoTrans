@@ -73,6 +73,10 @@ export function GeneralSection({ vm }: { vm: SettingsViewModel }) {
 						<Switch checked={preference.soundOnFinish} onCheckedChange={preference.setSoundOnFinish} />
 					</Row>
 					<div className="h-px bg-border/45" />
+					<Row label={m.soundOnTranslateFinish()}>
+						<Switch checked={preference.soundOnTranslateFinish} onCheckedChange={preference.setSoundOnTranslateFinish} />
+					</Row>
+					<div className="h-px bg-border/45" />
 					<Row label={m.focusWindowOnFinish()}>
 						<Switch checked={preference.focusOnFinish} onCheckedChange={preference.setFocusOnFinish} />
 					</Row>

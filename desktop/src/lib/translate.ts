@@ -34,6 +34,20 @@ function makeLlm(config: LlmConfig): Llm {
 	return new Claude(config)
 }
 
+/** True when the configured OpenAI-compatible endpoint runs on this machine. */
+export function isLocalEndpoint(config: LlmConfig | null | undefined): boolean {
+	const url = config?.openaiBaseUrl ?? ''
+	return config?.platform === 'openai' && /127\.0\.0\.1|localhost|\[::1\]/.test(url)
+}
+
+/** Short human-readable description of the active translation engine. */
+export function translationEngineLabel(config: LlmConfig | null | undefined): string {
+	if (!config) return '—'
+	if (config.platform === 'ollama') return `Ollama · ${config.model || 'llama3'}`
+	if (config.platform === 'claude') return `Claude · ${config.model || 'claude'}`
+	return `${isLocalEndpoint(config) ? 'Local' : 'OpenAI-compatible'} · ${config.model || 'gpt-4o-mini'}`
+}
+
 function numberedPrompt(target: string, lines: string): string {
 	return `Translate the following numbered lines into ${target}.\nKeep every line and reply ONLY as:\n<number>| <translation>\n\n${lines}`
 }
@@ -48,8 +62,51 @@ export async function translateText(text: string, targetCode: string, config: Ll
 }
 
 /**
+ * Translates arbitrarily long plain text line by line, in small chunks, so a
+ * local 1–4B model never has to hold the whole transcript in one request.
+ * Empty lines are kept in place (they are not sent), and the line count of the
+ * source is preserved, which keeps subtitle timing intact.
+ */
+export async function translateLongText(
+	text: string,
+	targetCode: string,
+	config: LlmConfig,
+	onProgress?: (done: number, total: number) => void,
+	chunkSize = 25,
+): Promise<string> {
+	const llm = makeLlm(config)
+	const target = languageName(targetCode)
+	const source = text.split('\n')
+	const pending = source.map((line, index) => ({ line, index })).filter((entry) => entry.line.trim().length > 0)
+	if (!pending.length) return ''
+
+	const result = [...source]
+	const CHUNK = Math.min(100, Math.max(1, Math.floor(chunkSize) || 25))
+	const total = pending.length
+
+	for (let offset = 0; offset < total; offset += CHUNK) {
+		const part = pending.slice(offset, offset + CHUNK)
+		const lines = part.map((entry, i) => `${i + 1}| ${entry.line}`).join('\n')
+		const answer = await llm.ask(numberedPrompt(target, lines))
+		if (answer) {
+			const parsed = new Map<number, string>()
+			for (const line of answer.split('\n')) {
+				const match = line.match(/^\s*(\d+)\s*[|.:、]\s*(.+?)\s*$/)
+				if (match) parsed.set(Number(match[1]), match[2].trim())
+			}
+			part.forEach((entry, i) => {
+				const translated = parsed.get(i + 1)
+				if (translated) result[entry.index] = translated
+			})
+		}
+		onProgress?.(Math.min(offset + CHUNK, total), total)
+	}
+	return result.join('\n')
+}
+
+/**
  * Translates transcript segments while preserving their count/timing.
- * Uses the configured LLM channel (Ollama for fully local translation).
+ * Uses the configured channel (a local OpenAI-compatible server keeps it fully offline).
  * Segments are sent in small chunks to stay within model limits.
  */
 export async function translateSegments(
@@ -57,11 +114,12 @@ export async function translateSegments(
 	targetCode: string,
 	config: LlmConfig,
 	onChunk?: (done: number, total: number) => void,
+	chunkSize = 25,
 ): Promise<Segment[]> {
 	const llm = makeLlm(config)
 	const target = languageName(targetCode)
 	const result: Segment[] = segments.map((s) => ({ ...s, text: '' }))
-	const CHUNK = 25
+	const CHUNK = Math.min(100, Math.max(1, Math.floor(chunkSize) || 25))
 	const total = segments.length
 
 	for (let offset = 0; offset < total; offset += CHUNK) {

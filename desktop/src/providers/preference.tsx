@@ -8,7 +8,8 @@ import { ModifyState } from '~/lib/types'
 import { supportedLanguages } from '~/lib/i18n'
 import { getLocale, getTextDirection, setLocale } from '~/paraglide/runtime.js'
 import { m } from '~/paraglide/messages.js'
-import { defaultOllamaConfig, LlmConfig } from '~/lib/llm'
+import { defaultOllamaConfig, LlmConfig, defaultOpenAIConfig } from '~/lib/llm'
+import { DEFAULT_LOCAL_BASE_URL } from '~/lib/translate-models'
 import { message } from '@tauri-apps/plugin-dialog'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { ModelMetadata } from '~/lib/model'
@@ -81,6 +82,10 @@ export interface Preference {
 	setLlmConfig: ModifyState<LlmConfig>
 	translationLlmConfig: LlmConfig
 	setTranslationLlmConfig: ModifyState<LlmConfig>
+	translateChunkSize: number
+	setTranslateChunkSize: ModifyState<number>
+	soundOnTranslateFinish: boolean
+	setSoundOnTranslateFinish: ModifyState<boolean>
 	ffmpegOptions: FfmpegOptions
 	setFfmpegOptions: ModifyState<FfmpegOptions>
 	resetOptions: () => void
@@ -155,6 +160,23 @@ export interface ModelOptions {
 
 const systemIsDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
 const defaultDisplayLanguage = 'en-US'
+
+/**
+ * Translation defaults to a **local** OpenAI-compatible server (llama.cpp
+ * `llama-server`, LM Studio, Jan, vLLM…) instead of Ollama, so the built-in
+ * path is offline and uses a small model.
+ */
+function defaultTranslateLlmConfig(): LlmConfig {
+	return {
+		...defaultOpenAIConfig(),
+		enabled: false,
+		model: 'Hunyuan-MT-7B.Q4_K_M.gguf',
+		openaiBaseUrl: DEFAULT_LOCAL_BASE_URL,
+		openaiApiKey: '',
+		temperature: 0.2,
+		maxTokens: 4096,
+	}
+}
 
 /** Migrate the legacy `prefs_theme` (light/dark only) into the new theme mode. */
 function initialThemeMode(): ThemeMode {
@@ -238,7 +260,9 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [storeRecordInDocuments, setStoreRecordInDocuments] = useLocalStorage('prefs_store_record_in_documents', defaultOptions.storeRecordInDocuments)
 	const [customRecordingPath, setCustomRecordingPath] = useLocalStorage<string | null>('prefs_custom_recording_path', null)
 	const [llmConfig, setLlmConfig] = useLocalStorage<LlmConfig>('prefs_llm_config', defaultOptions.llmConfig)
-	const [translationLlmConfig, setTranslationLlmConfig] = useLocalStorage<LlmConfig>('prefs_translation_llm_config', defaultOptions.llmConfig)
+	const [translationLlmConfig, setTranslationLlmConfig] = useLocalStorage<LlmConfig>('prefs_translation_llm_config', defaultTranslateLlmConfig())
+	const [translateChunkSize, setTranslateChunkSize] = useLocalStorage<number>('prefs_translate_chunk_size', 25)
+	const [soundOnTranslateFinish, setSoundOnTranslateFinish] = useLocalStorage<boolean>('prefs_sound_on_translate_finish', true)
 	const [ytDlpVersion, setYtDlpVersion] = useLocalStorage<string | null>('prefs_ytdlp_version', null)
 	const [shouldCheckYtDlpVersion, setShouldCheckYtDlpVersion] = useLocalStorage<boolean>('prefs_should_check_ytdlp_version', true)
 	const [advancedTranscribeOptions, setAdvancedTranscribeOptions] = useLocalStorage<AdvancedTranscribeOptions>('prefs_advanced_transcribe_options', {
@@ -424,6 +448,10 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setDisplayLanguage,
 		soundOnFinish,
 		setSoundOnFinish,
+		soundOnTranslateFinish,
+		setSoundOnTranslateFinish,
+		translateChunkSize,
+		setTranslateChunkSize,
 		focusOnFinish,
 		setFocusOnFinish,
 		modelPath,

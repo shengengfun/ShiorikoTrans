@@ -20,6 +20,15 @@ import { Button } from '~/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 
+/** Serialises segments in the selected format. */
+function buildDocument(format: TextFormat, segments: Segment[], speakerLabel: string) {
+	if (format === 'vtt') return asVtt(segments, speakerLabel)
+	if (format === 'srt') return asSrt(segments, speakerLabel)
+	if (format === 'json') return asJson(segments)
+	if (format === 'csv') return asCsv(segments)
+	return asText(segments, speakerLabel)
+}
+
 function CopyButton({ text }: { text: string }) {
 	const [copied, setCopied] = useState(false)
 	const [info, setInfo] = useState(m.copy())
@@ -71,7 +80,8 @@ export default function TextArea({
 	segments: Segment[] | null
 	readonly: boolean
 	placeholder?: string
-	file: NamedPath
+	/** Source file; may be unknown (e.g. the selection was cleared) — saving still works. */
+	file?: NamedPath
 	textFormat: TextFormat
 	setTextFormat: Dispatch<SetStateAction<TextFormat>>
 	bilingual?: Segment[] | null
@@ -88,24 +98,19 @@ export default function TextArea({
 		? (segments?.map((s) => `${s.text}\n${bilingualMap.get(s.start) ?? ''}`).join('\n\n') ?? text)
 		: text
 	useEffect(() => {
-		if (segments) {
-			setText(
-				textFormat === 'vtt'
-					? asVtt(segments, speakerLabel)
-					: textFormat === 'srt'
-						? asSrt(segments, speakerLabel)
-						: textFormat === 'json'
-							? asJson(segments)
-							: textFormat === 'csv'
-								? asCsv(segments)
-							: asText(segments, speakerLabel),
-			)
-		} else {
+		if (!segments) {
 			setText('')
+			return
 		}
+		// Segments stream in one by one; rebuilding the whole document per segment
+		// is O(n²) and froze the UI on long files. Debounce the rebuild instead.
+		const timer = window.setTimeout(() => {
+			setText(buildDocument(textFormat, segments, speakerLabel))
+		}, 150)
+		return () => window.clearTimeout(timer)
 	}, [textFormat, segments, speakerLabel])
 
-	async function download(textToSave: string, format: TextFormat, srcFile: NamedPath) {
+	async function download(textToSave: string, format: TextFormat, srcFile: NamedPath | null) {
 		if (format === 'html') {
 			textToSave = document.querySelector('.html')!.outerHTML.replace('contenteditable="true"', 'contenteditable="false"')
 		}
@@ -114,19 +119,35 @@ export default function TextArea({
 			return
 		}
 
+		// The textarea content is rebuilt on a debounce because segments stream in
+		// during transcription; saving in that window would write an empty file, so
+		// rebuild from the segments whenever the cached text is still missing.
+		if ((format === 'normal' || format === 'srt' || format === 'vtt' || format === 'json' || format === 'csv' || format === 'md') && !textToSave?.trim() && segments?.length) {
+			textToSave = buildDocument(format, segments, speakerLabel)
+		}
+
 		const ext = formatExtensions[format].slice(1)
-		const defaultPath = await invoke<NamedPath>('get_save_path', { srcPath: srcFile.path, targetExt: ext })
+		// The source file can be unknown (selection cleared after navigating away),
+		// in which case the dialog just opens with a sensible default name.
+		let defaultPath: NamedPath | null = null
+		if (srcFile?.path) {
+			try {
+				defaultPath = await invoke<NamedPath>('get_save_path', { srcPath: srcFile.path, targetExt: ext })
+			} catch (error) {
+				console.error('failed to resolve default save path:', error)
+			}
+		}
 		const filePath = await dialog.save({
 			filters: [{ name: '', extensions: [ext] }],
 			canCreateDirectories: true,
-			defaultPath: defaultPath.path,
+			defaultPath: defaultPath?.path ?? `transcript.${ext}`,
 		})
 
 		if (!filePath) return
 
 		if (format === 'docx') {
 			const fileName = await path.basename(filePath)
-			const doc = await toDocx(fileName, segments!, preference.textAreaDirection, speakerLabel)
+			const doc = await toDocx(fileName, segments ?? [], preference.textAreaDirection, speakerLabel)
 			const arrayBuffer = await doc.arrayBuffer()
 			await fs.writeFile(filePath, new Uint8Array(arrayBuffer))
 		} else {
@@ -147,7 +168,7 @@ export default function TextArea({
 
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<Button variant="ghost" size="icon" onMouseDown={() => download(displayText, textFormat, file)}>
+						<Button variant="ghost" size="icon" onMouseDown={() => download(displayText, textFormat, file ?? null)}>
 							<Download className="h-5 w-5" strokeWidth={2.1} />
 						</Button>
 					</TooltipTrigger>
@@ -218,7 +239,7 @@ export default function TextArea({
 				</div>
 			) : ['html', 'pdf', 'docx'].includes(textFormat) ? (
 				<div className="transcript-editor min-h-0 flex-1 overflow-x-hidden overflow-y-auto rounded-bl-lg rounded-br-lg border-x border-b border-input/70 bg-card">
-					<HTMLView preference={preference} segments={segments ?? []} file={file} />
+					<HTMLView preference={preference} segments={segments ?? []} file={file ?? { name: 'transcript', path: 'transcript' }} />
 				</div>
 			) : textFormat === 'md' ? (
 				<div

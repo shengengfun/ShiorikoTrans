@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { useLocalStorage } from 'usehooks-ts'
 import { toast } from 'sonner'
 import { setActivity } from '~/lib/activity'
+import successSound from '~/assets/success.mp3'
 import { TRANSLATE_LANGUAGES, translateSegments } from '~/lib/translate'
 import { webviewWindow } from '@tauri-apps/api'
 import * as keepAwake from 'tauri-plugin-keepawake-api'
@@ -65,21 +66,28 @@ export default function Home() {
 
 	async function translateCurrent() {
 		if (!vm.segments || translating) return
-		const llmConfig = vm.preference.llmConfig
+		// Translations use their own channel (local OpenAI-compatible server by
+		// default), so they do not depend on the summarisation model being on.
+		const llmConfig = vm.preference.translationLlmConfig
 		if (!llmConfig?.enabled) {
-			toast.error('请先在设置启用 LLM（本地推荐 Ollama）')
+			toast.error(m.needEnableTranslation())
 			return
 		}
 		setTranslating(true)
 		setActivity({ phase: 'translating', progress: 0 })
 		try {
-			const translated = await translateSegments(vm.segments, translateTarget, llmConfig, (done, total) =>
-				setActivity({ phase: 'translating', progress: Math.round((done / total) * 100) }),
+			const translated = await translateSegments(
+				vm.segments,
+				translateTarget,
+				llmConfig,
+				(done, total) => setActivity({ phase: 'translating', progress: Math.round((done / total) * 100) }),
+				vm.preference.translateChunkSize,
 			)
 			if (translated.length) {
 				vm.setTranslatedSegments(translated)
 				vm.setTranscriptTab('translated')
 				setShowBilingual(true)
+				if (vm.preference.soundOnTranslateFinish) new Audio(successSound).play()
 			}
 		} catch (error) {
 			console.error(error)
@@ -347,20 +355,18 @@ export default function Home() {
 						<Button
 							size="sm"
 							className="rounded-lg"
-							disabled={translating || !vm.preference.llmConfig?.enabled}
+							disabled={translating || !vm.preference.translationLlmConfig?.enabled}
 							onClick={translateCurrent}>
-							{translating ? '翻译中…' : '翻译'}
+							{translating ? m.translating() : m.translate()}
 						</Button>
-						{!vm.preference.llmConfig?.enabled && (
-							<p className="text-xs text-muted-foreground">需在设置启用 LLM（本地推荐 Ollama）</p>
-						)}
+						{!vm.preference.translationLlmConfig?.enabled && <p className="text-xs text-muted-foreground">{m.needEnableTranslation()}</p>}
 					</div>
 				)}
 
 				{vm.preference.homeTab === "file" && (vm.segments || vm.loading) ? (
 					<div className="flex h-[62vh] min-h-[340px] w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lg dark:shadow-2xl">
 						<TextArea
-							file={vm.files[0]}
+							file={vm.files[0] ?? vm.activeFile ?? undefined}
 							placeholder={m.transcriptWillDisplayedShortly()}
 							segments={
 								showBilingual || vm.transcriptTab === 'transcript' ? vm.segments :

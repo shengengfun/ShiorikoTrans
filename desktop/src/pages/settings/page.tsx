@@ -50,7 +50,7 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 		},
 		{
 			label: '翻译',
-			sections: [{ id: 'translation', label: '翻译', icon: <Languages className="h-4 w-4" /> }],
+			sections: [{ id: 'translation', label: m.translation(), icon: <Languages className="h-4 w-4" /> }],
 		},
 		{
 			label: m.hardwareAcceleration(),
@@ -61,7 +61,7 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 		{
 			label: m.customize(),
 			sections: [
-				{ id: 'appearance', label: 'Appearance', icon: <Palette className="h-4 w-4" /> },
+				{ id: 'appearance', label: m.appearance(), icon: <Palette className="h-4 w-4" /> },
 				{ id: 'dictation', label: m.globalDictation(), icon: <Mic className="h-4 w-4" /> },
 				{ id: 'summarize', label: m.processWithLlm(), icon: <Sparkles className="h-4 w-4" /> },
 			],

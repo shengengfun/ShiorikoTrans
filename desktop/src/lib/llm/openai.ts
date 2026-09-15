@@ -27,6 +27,7 @@ export class OpenAICompatible implements Llm {
 		const body = JSON.stringify({
 			model: this.config.model,
 			max_tokens: this.config.maxTokens,
+			...(this.config.temperature != null ? { temperature: this.config.temperature } : {}),
 			messages: [{ role: 'user', content: prompt }],
 		})
 		const headers: Record<string, string> = {

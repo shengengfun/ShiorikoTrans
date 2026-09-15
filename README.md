@@ -88,7 +88,11 @@ Windows 安装包使用 [SignPath Foundation](https://signpath.org/) 提供的�
 
 ## 翻译与摘要
 
-- 🌐 字幕 / 文本翻译：接入 **Claude**、任意 **OpenAI 兼容接口**，或本地 **Ollama**
+- 🌐 字幕 / 文本翻译：**默认走本地 OpenAI 兼容服务**（llama.cpp `llama-server` / LM Studio / Jan / vLLM），也支持 **Claude** 与 **Ollama** —— 默认完全离线，不需要 Ollama
+- 🧠 设置里内置**本地翻译模型目录**（Hunyuan-MT-7B 翻译专用、Qwen3 1.7B/4B、Qwen2.5 3B、Gemma 3 4B），可一键下载并复制启动命令
+- ✂️ 长文本按行分块翻译，保留行数（字幕时间轴不错位），并实时显示进度
+- 🔁 翻译页可直接切换已下载的本地模型，翻译配置与摘要 LLM **互不影响**
+- 🔔 转录 / 翻译完成提示音（可关闭）
 - 📚 术语表（glossary），保证专有名词译法统一
 - ✨ 多语言摘要
 - 🔀 转录结果可一键「发送到翻译页」
