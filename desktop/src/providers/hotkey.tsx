@@ -197,7 +197,7 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
 					stableTimestampsEnabled: false,
 				})
 				const res: transcript.Transcript = await invoke('transcribe', { options })
-				let resultText = transcript.asText(res.segments, m.speakerPrefix())
+				let resultText = transcript.asText(res.segments, preferenceRef.current.speakerLabels ? m.speakerPrefix() : null)
 
 				// Optional LLM summarization
 				const llm = createLlm()

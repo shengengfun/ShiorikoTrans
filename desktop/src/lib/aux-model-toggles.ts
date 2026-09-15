@@ -28,6 +28,8 @@ export function useAuxModelToggles() {
 			const exists = await fs.exists(modelPath)
 			if (exists) {
 				preference.setDiarizeEnabled(true)
+				// Labels are what diarization is for — show them right away.
+				preference.setSpeakerLabels(true)
 				return
 			}
 			const confirmed = await ask(m.downloadDiarizeModel(), { title: m.diarization(), kind: 'info' })
@@ -38,6 +40,7 @@ export function useAuxModelToggles() {
 				try {
 					await invoke('download_model', { url: config.diarizeModelUrl, path: modelPath })
 					preference.setDiarizeEnabled(true)
+					preference.setSpeakerLabels(true)
 					toast.success(m.downloadComplete())
 				} finally {
 					progressToast.setOpen(false)

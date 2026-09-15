@@ -309,6 +309,14 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 								<div className="h-px bg-border/45" />
 								<div className="flex items-center justify-between gap-3">
 									<span className="flex items-center gap-1 text-sm font-medium">
+										<InfoTooltip text={m.speakerLabelsInfo()} />
+										{m.speakerLabels()}
+									</span>
+									<Switch checked={preference.speakerLabels} onCheckedChange={preference.setSpeakerLabels} />
+								</div>
+								<div className="h-px bg-border/45" />
+								<div className="flex items-center justify-between gap-3">
+									<span className="flex items-center gap-1 text-sm font-medium">
 										<InfoTooltip text={m.stableTimestampsInfo()} />
 										{m.enableStableTimestamps()}
 									</span>

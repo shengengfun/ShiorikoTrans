@@ -43,11 +43,18 @@ export function formatTimestamp(seconds: number, alwaysIncludeHours: boolean, de
 	return result
 }
 
-function speakerPrefix(segment: Segment, label: string): string {
-	return segment.speaker != null ? `[${label} ${segment.speaker + 1}] ` : ''
+/**
+ * `[Speaker 1] ` prefix for a segment.
+ *
+ * Pass `null` as the label to omit it completely: engines report a speaker
+ * number even when diarization is off (everything ends up as speaker 1), so the
+ * prefix is opt-in instead of being derived from the segment alone.
+ */
+function speakerPrefix(segment: Segment, label: string | null): string {
+	return label && segment.speaker != null ? `[${label} ${segment.speaker + 1}] ` : ''
 }
 
-export function asSrt(segments: Segment[], speakerLabel: string = 'Speaker') {
+export function asSrt(segments: Segment[], speakerLabel: string | null = 'Speaker') {
 	return segments.reduce((transcript, segment, i) => {
 		return (
 			transcript +
@@ -58,7 +65,7 @@ export function asSrt(segments: Segment[], speakerLabel: string = 'Speaker') {
 	}, '')
 }
 
-export function asVtt(segments: Segment[], speakerLabel: string = 'Speaker') {
+export function asVtt(segments: Segment[], speakerLabel: string | null = 'Speaker') {
 	return segments.reduce((transcript, segment) => {
 		return (
 			transcript +
@@ -68,7 +75,7 @@ export function asVtt(segments: Segment[], speakerLabel: string = 'Speaker') {
 	}, '')
 }
 
-export function asText(segments: Segment[], speakerLabel: string = 'Speaker') {
+export function asText(segments: Segment[], speakerLabel: string | null = 'Speaker') {
 	return segments.reduce((transcript, segment) => {
 		return transcript + `${speakerPrefix(segment, speakerLabel)}${segment.text.trim()}\n`
 	}, '')

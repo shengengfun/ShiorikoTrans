@@ -55,7 +55,7 @@ export function viewModel() {
 		}
 	}, [preference.llmConfig])
 
-	const speakerLabel = m.speakerPrefix()
+	const speakerLabel = preference.speakerLabels ? m.speakerPrefix() : null
 	function getText(segments: Segment[], format: TextFormat) {
 		if (format === 'srt') {
 			return asSrt(segments, speakerLabel)

@@ -1,7 +1,7 @@
 {
 	"name": "shiorikotrans",
 	"private": true,
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"packageManager": "pnpm@10.4.1",
 	"type": "module",
 	"scripts": {
@@ -11,7 +11,11 @@
 		"build": "pnpm i18n:generate && tsc && vite build",
 		"preview": "vite preview",
 		"tauri": "tauri",
-		"lint": "eslint ."
+		"lint": "eslint .",
+		"build:windows": "node scripts/build-flavor.mjs full",
+		"build:windows:slim": "node scripts/build-flavor.mjs slim",
+		"build:linux": "tauri build --bundles deb,rpm",
+		"build:macos": "tauri build --bundles dmg"
 	},
 	"dependencies": {
 		"@fontsource/roboto": "^5.2.9",

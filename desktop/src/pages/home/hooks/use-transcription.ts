@@ -9,6 +9,8 @@ import successSound from '~/assets/success.mp3'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
 import { prepareTranscribeOptions } from '~/lib/transcribe-options'
 import { setActivity } from '~/lib/activity'
+import { ensureFfmpegInstalled } from '~/lib/ffmpeg'
+import { useModelDownload } from '~/lib/model-download'
 import { startKeepAwake, stopKeepAwake } from '~/lib/keep-awake'
 import { isUserError } from '~/lib/sona-errors'
 import * as transcript from '~/lib/transcript'
@@ -23,6 +25,7 @@ interface UseTranscriptionOptions {
 export function useTranscription({ onResetSummary, onSummarize }: UseTranscriptionOptions) {
 	const preference = usePreferenceProvider()
 	const preferenceRef = useRef(preference)
+	const { withProgress } = useModelDownload()
 	const { setState: setErrorModal } = useContext(ErrorModalContext)
 	const abortRef = useRef(false)
 	const [loading, setLoading] = useState(false)
@@ -74,6 +77,10 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 			await dialog.message(m.avx2NotSupported(), { kind: 'error' })
 			return
 		}
+
+		// The slim installer does not ship ffmpeg (it is the biggest file in the
+		// package), so offer to fetch it before the decode step needs it.
+		if (!(await ensureFfmpegInstalled(withProgress))) return
 
 		startKeepAwake()
 		setActiveFile({ name: path.split(/[\\/]/).pop() || path, path })

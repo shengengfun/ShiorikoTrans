@@ -108,6 +108,8 @@ async fn main() -> Result<()> {
             cmd::audio::start_record,
             cmd::app::get_models_folder,
             cmd::app::get_system_stats,
+            cmd::deps::get_ffmpeg_status,
+            cmd::deps::install_ffmpeg,
             cmd::app::get_logs_folder,
             cmd::app::show_log_path,
             cmd::app::show_temp_path,

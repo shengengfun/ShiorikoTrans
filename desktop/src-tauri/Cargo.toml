@@ -1,6 +1,6 @@
 [package]
 name = "shiorikotrans"
-version = "1.0.7"
+version = "1.0.8"
 description = "ShiorikoTrans - Transcribe audio and video on your device"
 authors = ["ShiorikoTrans Team"]
 license = "MIT"
@@ -84,6 +84,7 @@ winreg = "0.55.0"
 windows = { version = "0.62.2", features = [
 	"Win32_System_Console",
 	"Win32_Foundation",
+	"Win32_System_Threading",
 ] }
 # Used to redirect stdout/stderr from c++ to the attached console
 libc = "0.2.180"

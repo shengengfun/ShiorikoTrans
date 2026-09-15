@@ -84,7 +84,8 @@ Windows 安装包使用 [SignPath Foundation](https://signpath.org/) 提供的�
 
 - 📝 `SRT`、`VTT`、`TXT`、`HTML`、`PDF`、`JSON`、`DOCX`
 - 💬 双语字幕导出（原文 + 译文双行，可导出双语 SRT）
-- 🖨️ 直接把转写结果发送到打印机
+- �️ 说话人分离（diarization）可选，`[发言者 n]` 标签可单独开关（默认关闭，未开启分离时不再每行都加前缀）
+- �🖨️ 直接把转写结果发送到打印机
 
 ## 翻译与摘要
 
@@ -120,6 +121,15 @@ Windows 安装包使用 [SignPath Foundation](https://signpath.org/) 提供的�
 | Windows 10 / 11 | x64 | ✅ 主要开发与发布平台 |
 | macOS | Intel / Apple Silicon | ✅ |
 | Linux | x64 | ✅ |
+
+Windows 提供两种安装包，功能完全相同，只差 ffmpeg 是否内置：
+
+| 安装包 | ffmpeg | 适用场景 |
+| --- | --- | --- |
+| `ShiorikoTrans_<ver>_x64-setup.exe` | 内置 | 装完即用，可离线处理音视频 |
+| `ShiorikoTrans_<ver>_x64-setup-slim.exe` | 按需下载（约 83 MB） | 不在意首次联网，想要更小的安装包 |
+
+精简版在首次转录音频/视频时会提示下载 ffmpeg，也可以随时到「设置 → 转录 → 运行时依赖」手动下载；自己安装的 ffmpeg（PATH 里）同样会被识别。
 
 # 模型与引擎 🤖
 

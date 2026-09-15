@@ -82,6 +82,9 @@ pub async fn download_audio(app_handle: AppHandle, url: String, out_path: String
     let path = app_handle.path().app_local_data_dir().context("Can't get data directory")?;
     let path = path.join(name);
     tracing::debug!("path is {}", path.display());
+    // ffmpeg may be missing (slim installer, download not confirmed yet); only
+    // pass the flag when we actually know where it is, otherwise yt-dlp would
+    // fail on an empty `--ffmpeg-location`.
     let ffmpeg_path = get_ffmpeg_path();
 
     // Set permission
@@ -96,22 +99,23 @@ pub async fn download_audio(app_handle: AppHandle, url: String, out_path: String
     }
 
     let mut cmd = std::process::Command::new(path);
-    let cmd = cmd
-        .args([
-            "--progress-template",
-            "{\"progress\": \"%(progress.percent)s\", \"total_bytes\": \"%(progress.total_bytes)s\", \"progress_str\": \"%(progress._percent_str)s\"}\n",
-            "--no-playlist",
-            "-x",
-            "--audio-format",
-            "m4a",
-            "--ffmpeg-location",
-            &ffmpeg_path,
-            &url,
-            "-o",
-            &out_path,
-        ])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+    let mut args: Vec<String> = vec![
+        "--progress-template".into(),
+        "{\"progress\": \"%(progress.percent)s\", \"total_bytes\": \"%(progress.total_bytes)s\", \"progress_str\": \"%(progress._percent_str)s\"}\n".into(),
+        "--no-playlist".into(),
+        "-x".into(),
+        "--audio-format".into(),
+        "m4a".into(),
+    ];
+    if !ffmpeg_path.is_empty() {
+        args.push("--ffmpeg-location".into());
+        args.push(ffmpeg_path);
+    }
+    args.push(url);
+    args.push("-o".into());
+    args.push(out_path);
+
+    let cmd = cmd.args(&args).stdout(Stdio::piped()).stderr(Stdio::piped());
 
     #[cfg(windows)]
     let cmd = cmd.creation_flags(CREATE_NO_WINDOW);

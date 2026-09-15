@@ -145,20 +145,10 @@ fn validate_executable(path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
-pub fn resolve_ffmpeg_path(app_handle: &tauri::AppHandle) -> Option<PathBuf> {
-    let resource_dir = app_handle.path().resource_dir().ok()?;
-
-    #[cfg(target_os = "windows")]
-    let binary_name = "ffmpeg.exe";
-    #[cfg(not(target_os = "windows"))]
-    let binary_name = "ffmpeg";
-
-    let sidecar_path = resource_dir.join(binary_name);
-    if sidecar_path.exists() {
-        return Some(sidecar_path);
-    }
-
-    None
+pub fn resolve_ffmpeg_path(_app_handle: &tauri::AppHandle) -> Option<PathBuf> {
+    // Bundled, downloaded-on-demand and PATH locations are all handled here so
+    // the slim and full installers behave identically.
+    crate::ffmpeg::find_ffmpeg_path()
 }
 
 fn validate_model_file(path: &str) -> Result<u64> {

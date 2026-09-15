@@ -5,8 +5,40 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
+/// Runs the inference sidecar at below-normal priority.
+///
+/// The engine saturates every core while transcribing, which used to starve the
+/// webview process and make the window controls (minimise / maximise / close are
+/// drawn by the app itself) feel frozen. Dropping the sidecar one priority class
+/// keeps the UI snappy at the cost of a few percent throughput.
+#[cfg(target_os = "windows")]
+fn lower_process_priority(pid: u32) {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Threading::{
+        OpenProcess, SetPriorityClass, BELOW_NORMAL_PRIORITY_CLASS, PROCESS_SET_INFORMATION,
+    };
+    unsafe {
+        match OpenProcess(PROCESS_SET_INFORMATION, false, pid) {
+            Ok(handle) => {
+                if let Err(error) = SetPriorityClass(handle, BELOW_NORMAL_PRIORITY_CLASS) {
+                    tracing::warn!("failed to lower sona priority: {error}");
+                } else {
+                    tracing::debug!("sona process {} set to below-normal priority", pid);
+                }
+                let _ = CloseHandle(handle);
+            }
+            Err(error) => tracing::warn!("failed to open sona process {}: {error}", pid),
+        }
+    }
+}
+
 impl SonaProcess {
-    pub fn spawn(binary_path: &Path, ffmpeg_path: Option<&Path>, gpu_device: Option<i32>, unload_timeout_minutes: u32) -> Result<Self> {
+    pub fn spawn(
+        binary_path: &Path,
+        ffmpeg_path: Option<&Path>,
+        gpu_device: Option<i32>,
+        unload_timeout_minutes: u32,
+    ) -> Result<Self> {
         tracing::debug!("spawning sona at {}", binary_path.display());
         let unload_timeout = if unload_timeout_minutes == 0 {
             "0".to_string()
@@ -52,7 +84,10 @@ impl SonaProcess {
                         path_display, size
                     )
                 }
-                Some(5) => format!(" - os error 5: access denied. Check antivirus or file permissions for '{}'", path_display),
+                Some(5) => format!(
+                    " - os error 5: access denied. Check antivirus or file permissions for '{}'",
+                    path_display
+                ),
                 _ => String::new(),
             };
             eyre::eyre!("failed to spawn sona binary at '{}'{}: {}", path_display, extra_info, e)
@@ -61,6 +96,8 @@ impl SonaProcess {
         let pid = child.id();
         SONA_PID.store(pid, std::sync::atomic::Ordering::SeqCst);
         tracing::debug!("sona process spawned with PID {}", pid);
+        #[cfg(target_os = "windows")]
+        lower_process_priority(pid);
         let mut stderr = child.stderr.take();
         let stdout = child.stdout.take().context("failed to get sona stdout")?;
         let mut reader = std::io::BufReader::new(stdout);
@@ -168,12 +205,7 @@ impl SonaProcess {
     /// otherwise), making this a cheap way to detect the server-side unload.
     pub async fn model_loaded(&self) -> Result<bool> {
         let url = format!("{}/ready", self.base_url());
-        let response = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .context("failed to check sona readiness")?;
+        let response = self.client.get(&url).send().await.context("failed to check sona readiness")?;
         Ok(response.status().is_success())
     }
 

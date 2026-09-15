@@ -25,8 +25,10 @@ ShiorikoTrans is a desktop transcription app built with **Tauri** (Rust + TypeSc
 
 ### FFmpeg Helper
 
-- macOS and Windows builds also bundle `ffmpeg` from the Sona release archives
-- ShiorikoTrans passes its path to Sona with `SONA_FFMPEG_PATH`
+- The **full** Windows / macOS build bundles `ffmpeg` from the Sona release archives (~97 MB, the largest file in the package)
+- The **slim** Windows build (`tauri.slim.conf.json`, `pnpm build:windows:slim`) leaves it out and downloads the public single-file static build from `eugeneware/ffmpeg-static` on demand into `<app data>/bin/`
+- `ffmpeg.rs` resolves the binary from: downloaded copy → bundled next to the exe / in resources → `PATH`
+- ShiorikoTrans passes its path to Sona with `SONA_FFMPEG_PATH` (the sidecar is restarted after a fresh download so it picks the path up)
 
 ### Build Flow
 

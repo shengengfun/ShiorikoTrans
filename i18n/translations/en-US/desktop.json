@@ -471,5 +471,18 @@
 	"translate": "Translate",
 	"translating": "Translating…",
 	"needSourceText": "Choose a file or paste some text first",
-	"currentEngine": "Current engine"
+	"currentEngine": "Current engine",
+	"speakerLabels": "Show speaker labels",
+	"speakerLabelsInfo": "Writes a [Speaker n] prefix in front of every line in the transcript, the HTML preview and every export (txt / srt / vtt / docx). Engines report a speaker number even when diarization is off — everything is speaker 1 then — so this is off by default.",
+	"speakerOptionsHint": "Speaker labels only make sense together with speaker diarization. Each model also exposes these options in its own settings dialog.",
+	"runtimeDependencies": "Runtime dependencies",
+	"runtimeDependenciesInfo": "ffmpeg decodes and merges audio before transcription. The slim installer does not bundle it (~83 MB) and downloads it on first use; you can also install it yourself or put it on PATH.",
+	"ffmpegRequired": "ffmpeg is required to decode this file. Download it now (~83 MB)?",
+	"downloadingFfmpeg": "Downloading ffmpeg…",
+	"downloadFfmpeg": "Download ffmpeg ({size} MB)",
+	"ffmpegBundled": "bundled",
+	"ffmpegDownloaded": "downloaded",
+	"ffmpegSystem": "system",
+	"notInstalled": "not installed",
+	"checkAgain": "Check again"
 }

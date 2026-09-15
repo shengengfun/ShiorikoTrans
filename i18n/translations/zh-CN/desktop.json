@@ -372,5 +372,18 @@
 	"translate": "翻译",
 	"translating": "翻译中…",
 	"needSourceText": "请先选择文件或粘贴内容",
-	"currentEngine": "当前引擎"
+	"currentEngine": "当前引擎",
+	"speakerLabels": "显示发言者标签",
+	"speakerLabelsInfo": "在转录文本、HTML 预览以及所有导出格式（txt / srt / vtt / docx）的每行前面加上 [发言者 n] 前缀。引擎在未开启说话人分离时也会返回发言者编号（全部是 1），因此默认关闭。",
+	"speakerOptionsHint": "发言者标签需要配合说话人分离才有意义。每个模型自己的设置窗口里也有这几个选项。",
+	"runtimeDependencies": "运行时依赖",
+	"runtimeDependenciesInfo": "ffmpeg 负责转录前的音频解码与合并。精简版安装包不内置它（约 83 MB），首次使用时会自动下载；你也可以自行安装或放进 PATH。",
+	"ffmpegRequired": "需要 ffmpeg 才能解码这个文件，现在下载吗？（约 83 MB）",
+	"downloadingFfmpeg": "正在下载 ffmpeg…",
+	"downloadFfmpeg": "下载 ffmpeg（{size} MB）",
+	"ffmpegBundled": "安装包内置",
+	"ffmpegDownloaded": "已下载",
+	"ffmpegSystem": "系统安装",
+	"notInstalled": "未安装",
+	"checkAgain": "重新检测"
 }

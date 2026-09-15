@@ -21,7 +21,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 
 /** Serialises segments in the selected format. */
-function buildDocument(format: TextFormat, segments: Segment[], speakerLabel: string) {
+function buildDocument(format: TextFormat, segments: Segment[], speakerLabel: string | null) {
 	if (format === 'vtt') return asVtt(segments, speakerLabel)
 	if (format === 'srt') return asSrt(segments, speakerLabel)
 	if (format === 'json') return asJson(segments)
@@ -89,7 +89,7 @@ export default function TextArea({
 	const preference = usePreferenceProvider()
 	const [text, setText] = useState('')
 
-	const speakerLabel = m.speakerPrefix()
+	const speakerLabel = preference.speakerLabels ? m.speakerPrefix() : null
 
 	// Bilingual (原文 + 译文双行) support. Falls back to plain text otherwise.
 	const bilingualActive = !!bilingual && !!segments

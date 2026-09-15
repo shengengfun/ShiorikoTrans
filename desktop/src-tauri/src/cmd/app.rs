@@ -1,6 +1,7 @@
 use crate::config::STORE_FILENAME;
 use crate::ffmpeg;
 use eyre::{Context, Result};
+use std::sync::{Mutex, OnceLock};
 
 /// Return true if there's internet connection
 /// timeout in ms
@@ -96,22 +97,53 @@ pub fn get_models_folder(app_handle: tauri::AppHandle) -> Result<PathBuf> {
     Ok(path)
 }
 
+/// Cached `(cpu %, memory %)` snapshot, refreshed by [`start_system_stats_sampler`].
+static SYSTEM_STATS: OnceLock<Mutex<(f32, f32)>> = OnceLock::new();
+
+fn system_stats_cache() -> &'static Mutex<(f32, f32)> {
+    SYSTEM_STATS.get_or_init(|| Mutex::new((0.0, 0.0)))
+}
+
 #[tauri::command]
 pub fn get_system_stats() -> eyre::Result<(f32, f32)> {
-    use std::sync::{Mutex, OnceLock};
-    static SYSTEM: OnceLock<Mutex<sysinfo::System>> = OnceLock::new();
-    let sys = SYSTEM.get_or_init(|| Mutex::new(sysinfo::System::new()));
-    let mut guard = sys.lock().map_err(|_| eyre::eyre!("system stats lock poisoned"))?;
-    guard.refresh_cpu_usage();
-    guard.refresh_memory();
-    let cpu = guard.global_cpu_info().cpu_usage();
-    let total = guard.total_memory();
-    let mem = if total == 0 {
-        0.0
-    } else {
-        (guard.used_memory() as f64 / total as f64 * 100.0) as f32
-    };
-    Ok((cpu, mem))
+    let cache = system_stats_cache();
+    let value = *cache.lock().unwrap_or_else(|error| error.into_inner());
+    Ok(value)
+}
+
+/// Samples CPU / memory once a second on a background thread.
+///
+/// `sysinfo`'s CPU refresh is a *blocking* call: it waits for its sampling
+/// interval to elapse so it can compute a delta against the previous reading.
+/// Synchronous Tauri commands execute on the main (event loop) thread, so
+/// polling it from the UI every second stalled the window — which is why
+/// minimising the window felt broken while a transcription was running. The
+/// command above only reads this cached snapshot now.
+pub fn start_system_stats_sampler() {
+    static STARTED: OnceLock<()> = OnceLock::new();
+    STARTED.get_or_init(|| {
+        std::thread::Builder::new()
+            .name("system-stats".into())
+            .spawn(|| {
+                let mut system = sysinfo::System::new();
+                loop {
+                    system.refresh_cpu_usage();
+                    system.refresh_memory();
+                    let cpu = system.global_cpu_info().cpu_usage();
+                    let total = system.total_memory();
+                    let memory = if total == 0 {
+                        0.0
+                    } else {
+                        (system.used_memory() as f64 / total as f64 * 100.0) as f32
+                    };
+                    if let Ok(mut guard) = system_stats_cache().lock() {
+                        *guard = (cpu, memory);
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(1000));
+                }
+            })
+            .expect("failed to spawn system stats sampler");
+    });
 }
 
 #[tauri::command]

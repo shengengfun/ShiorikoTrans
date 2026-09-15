@@ -123,6 +123,17 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     tracing::debug!("AVX2: {}", crate::cmd::app::is_avx2_enabled());
     tracing::debug!("Executable Architecture: {}", std::env::consts::ARCH);
 
+    // CPU/memory sampling happens off the main thread: the UI polls it every
+    // second and `sysinfo`'s CPU refresh blocks, which used to stall the event
+    // loop (and therefore window controls) while transcribing.
+    crate::cmd::app::start_system_stats_sampler();
+
+    // ffmpeg may live in the app data folder when the slim installer was used,
+    // so the lookup needs to know where that is.
+    if let Ok(data_dir) = app.path().app_local_data_dir() {
+        crate::ffmpeg::set_app_data_dir(data_dir);
+    }
+
     tracing::debug!("APP VERSION: {}", app.package_info().version.to_string());
     tracing::debug!("COMMIT HASH: {}", env!("COMMIT_HASH"));
     tracing::debug!("App Info: {}", crate::diagnostics::get_app_info());

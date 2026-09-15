@@ -22,7 +22,7 @@ export function useSummarization() {
 		if (!llm) return
 		setSummarizing(true)
 		try {
-			const question = prompt.replace('%s', transcript.asText(source, m.speakerPrefix()))
+			const question = prompt.replace('%s', transcript.asText(source, preference.speakerLabels ? m.speakerPrefix() : null))
 			const answerPromise = llm.ask(question)
 			toast.promise(answerPromise, {
 				loading: m.summarizeLoading(),

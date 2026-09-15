@@ -3,9 +3,131 @@ use eyre::{bail, ContextCompat, Result};
 use rand::distr::Alphanumeric;
 use rand::Rng;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::OnceLock;
 use which::which;
+
+/// Where a runtime-downloaded ffmpeg lives (`<app data>/bin/ffmpeg[.exe]`).
+///
+/// The "slim" installer ships without ffmpeg (it is ~83 MB on its own) and the
+/// app offers to fetch it on demand, so this location has to be part of the
+/// normal lookup — set once during startup.
+static APP_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn set_app_data_dir(dir: PathBuf) {
+    let _ = APP_DATA_DIR.set(dir);
+}
+
+/// `<app data>/bin/ffmpeg[.exe]` — also the download target.
+pub fn installed_ffmpeg_path() -> Option<PathBuf> {
+    Some(APP_DATA_DIR.get()?.join("bin").join(EXECUTABLE_NAME))
+}
+
+/// Legacy location (`<app data>/ffmpeg[.exe]`), kept for older installs.
+fn legacy_installed_ffmpeg_path() -> Option<PathBuf> {
+    Some(APP_DATA_DIR.get()?.join(EXECUTABLE_NAME))
+}
+
+/// How an ffmpeg binary was found — surfaced in the settings UI.
+#[derive(Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FfmpegSource {
+    /// Next to the app / inside its resources (full installer).
+    Bundled,
+    /// Downloaded on demand into the app data folder (slim installer).
+    Downloaded,
+    /// Found on `PATH` (e.g. installed by the user or the system package).
+    System,
+}
+
+/// Resolve ffmpeg together with where it came from.
+pub fn resolve_ffmpeg() -> Option<(PathBuf, FfmpegSource)> {
+    for (candidate, source) in [
+        (installed_ffmpeg_path(), FfmpegSource::Downloaded),
+        (legacy_installed_ffmpeg_path(), FfmpegSource::Downloaded),
+    ] {
+        if let Some(path) = candidate {
+            if path.is_file() {
+                return Some((path, source));
+            }
+        }
+    }
+
+    if let Some(path) = bundled_ffmpeg_path() {
+        return Some((path, FfmpegSource::Bundled));
+    }
+
+    which(EXECUTABLE_NAME).ok().map(|path| (path, FfmpegSource::System))
+}
+
+fn bundled_ffmpeg_path() -> Option<PathBuf> {
+    let cwd = std::env::current_dir().ok()?;
+    let ffmpeg_in_cwd = cwd.join(EXECUTABLE_NAME);
+    if ffmpeg_in_cwd.is_file() {
+        return Some(ffmpeg_in_cwd);
+    }
+
+    let exe_path = std::env::current_exe().ok()?;
+    let exe_folder = exe_path.parent()?;
+    let ffmpeg_in_exe_folder = exe_folder.join(EXECUTABLE_NAME);
+    if ffmpeg_in_exe_folder.is_file() {
+        return Some(ffmpeg_in_exe_folder);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let resources_folder = exe_folder.join("../Resources");
+        let ffmpeg_in_resources = resources_folder.join(EXECUTABLE_NAME);
+        if ffmpeg_in_resources.is_file() {
+            return Some(ffmpeg_in_resources);
+        }
+    }
+
+    None
+}
+
+/// Public, single-file static builds — no archive extraction needed at runtime.
+const FFMPEG_DOWNLOAD_TAG: &str = "b6.1.1";
+
+pub fn ffmpeg_download_url() -> Result<String> {
+    let asset = if cfg!(target_os = "windows") {
+        "ffmpeg-win32-x64"
+    } else if cfg!(target_os = "macos") {
+        if cfg!(target_arch = "aarch64") {
+            "ffmpeg-darwin-arm64"
+        } else {
+            "ffmpeg-darwin-x64"
+        }
+    } else if cfg!(target_arch = "aarch64") {
+        "ffmpeg-linux-arm64"
+    } else {
+        "ffmpeg-linux-x64"
+    };
+    Ok(format!(
+        "https://github.com/eugeneware/ffmpeg-static/releases/download/{FFMPEG_DOWNLOAD_TAG}/{asset}"
+    ))
+}
+
+/// Mark a freshly downloaded binary as executable (no-op on Windows).
+pub fn make_executable(path: &Path) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = std::fs::metadata(path)?.permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(path, permissions)?;
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+    Ok(())
+}
+
+pub fn find_ffmpeg_path() -> Option<PathBuf> {
+    resolve_ffmpeg().map(|(path, _)| path)
+}
 
 pub fn get_local_time() -> String {
     let now = Local::now();
@@ -37,36 +159,6 @@ pub fn get_shiorikotrans_temp_folder() -> PathBuf {
         return dir;
     }
     std::env::temp_dir()
-}
-
-pub fn find_ffmpeg_path() -> Option<PathBuf> {
-    if let Ok(path) = which(EXECUTABLE_NAME) {
-        return Some(path);
-    }
-
-    let cwd = std::env::current_dir().ok()?;
-    let ffmpeg_in_cwd = cwd.join(EXECUTABLE_NAME);
-    if ffmpeg_in_cwd.is_file() && ffmpeg_in_cwd.exists() {
-        return Some(ffmpeg_in_cwd);
-    }
-
-    if let Ok(exe_path) = std::env::current_exe() {
-        let exe_folder = exe_path.parent()?;
-        let ffmpeg_in_exe_folder = exe_folder.join(EXECUTABLE_NAME);
-        if ffmpeg_in_exe_folder.exists() {
-            return Some(ffmpeg_in_exe_folder);
-        }
-        #[cfg(target_os = "macos")]
-        {
-            let resources_folder = exe_folder.join("../Resources");
-            let ffmpeg_in_resources = resources_folder.join(EXECUTABLE_NAME);
-            if ffmpeg_in_resources.exists() {
-                return Some(ffmpeg_in_resources);
-            }
-        }
-    }
-
-    None
 }
 
 pub fn normalize(input: PathBuf, output: PathBuf, additional_ffmpeg_args: Option<Vec<String>>) -> Result<()> {

@@ -1,6 +1,7 @@
 use serde::Serialize;
 pub mod app;
 pub mod audio;
+pub mod deps;
 pub mod download;
 pub mod files;
 pub mod permissions;

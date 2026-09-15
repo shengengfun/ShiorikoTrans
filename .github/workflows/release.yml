@@ -231,3 +231,28 @@ jobs:
               run: |
                   $version = (Get-Content "desktop/src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json).version
                   gh release upload "v$version" "${{ steps.release-installer.outputs.path }}" --clobber
+
+            # The slim flavour leaves out ffmpeg (~83 MB uncompressed, the single
+            # biggest file in the package) and downloads it on demand instead.
+            # Built last so it cannot clobber the full installer that was located,
+            # signed and uploaded above.
+            - name: Build slim Windows installer
+              if: ${{ !inputs.sign-windows }}
+              run: pnpm exec tauri build --bundles nsis --config src-tauri/tauri.slim.conf.json
+              working-directory: ./desktop
+              env:
+                  APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
+                  APTABASE_BASE_URL: ${{ secrets.APTABASE_BASE_URL }}
+
+            - name: Upload slim Windows installer to release
+              if: ${{ !inputs.sign-windows }}
+              shell: pwsh
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  $path = Get-ChildItem "target/release/bundle/nsis/ShiorikoTrans_*_x64-setup.exe" | Select-Object -First 1 -ExpandProperty FullName
+                  if (-not $path) { throw "slim NSIS installer was not produced" }
+                  $slim = $path -replace "-setup\.exe$", "-setup-slim.exe"
+                  Move-Item $path $slim
+                  $version = (Get-Content "desktop/src-tauri/tauri.conf.json" -Raw | ConvertFrom-Json).version
+                  gh release upload "v$version" $slim --clobber

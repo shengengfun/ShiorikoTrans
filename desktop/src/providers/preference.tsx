@@ -100,6 +100,9 @@ export interface Preference {
 
 	diarizeEnabled: boolean
 	setDiarizeEnabled: ModifyState<boolean>
+	/** Show `[Speaker n]` prefixes in transcripts/exports (needs diarization to be useful). */
+	speakerLabels: boolean
+	setSpeakerLabels: ModifyState<boolean>
 	stableTimestampsEnabled: boolean
 	setStableTimestampsEnabled: ModifyState<boolean>
 
@@ -273,6 +276,7 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 
 	const [recentLanguages, setRecentLanguages] = useLocalStorage<{ code: string; ts: number }[]>('prefs_recent_languages', [])
 	const [diarizeEnabled, setDiarizeEnabled] = useLocalStorage<boolean>('prefs_diarize_enabled', false)
+	const [speakerLabels, setSpeakerLabels] = useLocalStorage<boolean>('prefs_speaker_labels', false)
 	const [stableTimestampsEnabled, setStableTimestampsEnabled] = useLocalStorage<boolean>('prefs_stable_timestamps_enabled', false)
 	const [gpuDevice, setGpuDevice] = useLocalStorage<number | null>('prefs_gpu_device', null)
 	const [forceCpu, setForceCpu] = useLocalStorage<boolean>('prefs_force_cpu', false)
@@ -488,6 +492,8 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setRecentLanguages,
 		diarizeEnabled,
 		setDiarizeEnabled,
+		speakerLabels,
+		setSpeakerLabels,
 		stableTimestampsEnabled,
 		setStableTimestampsEnabled,
 		gpuDevice,
