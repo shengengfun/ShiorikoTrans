@@ -1,5 +1,5 @@
 import { m } from '~/paraglide/messages.js'
-import { ModifyState, NamedPath } from './types'
+import { NamedPath } from './types'
 import { pathToNamedPath } from './fs'
 import { ask } from '@tauri-apps/plugin-dialog'
 import { useEffect } from 'react'
@@ -9,7 +9,7 @@ import * as config from '~/lib/config'
 import * as os from '@tauri-apps/plugin-os'
 
 interface UseSingleInstanceProps {
-	setFiles: ModifyState<NamedPath[]>
+	setFiles: (files: NamedPath[]) => void
 }
 
 export function useSingleInstance({ setFiles }: UseSingleInstanceProps) {
@@ -44,6 +44,7 @@ export function useSingleInstance({ setFiles }: UseSingleInstanceProps) {
 			}
 			if (newFiles.length > 0) {
 				setFiles([...newFiles])
+				navigate('/')
 			}
 		})
 	}

@@ -13,7 +13,7 @@ export function useMediaSelection() {
 	const location = useLocation()
 	const navigate = useNavigate()
 	const preference = usePreferenceProvider()
-	const { files, setFiles } = useFilesContext()
+	const { files, setFiles, consumeExplicitOpen } = useFilesContext()
 	const session = useTranscriptionProvider()
 	const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 	const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
@@ -22,6 +22,12 @@ export function useMediaSelection() {
 	useEffect(() => {
 		// Keep the running session's file when the user comes back to the page.
 		if (session.loading && session.activeFile) return
+		// A file opened from the recent list / a finished recording was selected
+		// deliberately while we navigated here — do not wipe it.
+		if (consumeExplicitOpen(files)) {
+			setSelectedFolder(null)
+			return
+		}
 		setFiles([])
 		setSelectedFolder(null)
 		if (files.length !== 1) setAudio(null)

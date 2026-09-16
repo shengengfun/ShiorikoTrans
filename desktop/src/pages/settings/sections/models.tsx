@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react'
 import { listen } from '@tauri-apps/api/event'
-import { ChevronRight, FolderOpen, PencilLine, Settings2, Trash2 } from 'lucide-react'
+import { ChevronRight, Download, FolderOpen, PencilLine, Settings2, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { m } from '~/paraglide/messages.js'
 import { ReactComponent as FolderIcon } from '~/icons/folder.svg'
-import { ReactComponent as LinkIcon } from '~/icons/link.svg'
 import { ReactComponent as WrenchIcon } from '~/icons/wrench.svg'
+import { ReactComponent as LinkIcon } from '~/icons/link.svg'
 import { openModelSettings } from '~/lib/app'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
 import { Progress } from '~/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
-import { SectionCard, type SettingsViewModel } from './shared'
 import { getFriendlyModelName, isCatalogModelInstalled } from '~/lib/model'
 import { useModelDownload } from '~/lib/model-download'
 import { CATALOG_GROUPS, type CatalogGroup, type CatalogModel } from '~/lib/model-catalog'
 import { detectModelType, MODEL_PIPELINES, type ModelType } from '~/lib/model-pipeline'
 import { cn } from '~/lib/style'
+import { ActionRow, AdaptiveSections, EmptyHint, SettingBlock, SettingPanel, SettingRow, SettingsGroup, StateBadge } from '../components/kit'
+import type { SettingsViewModel } from './shared'
 
 function getModelQuantization(filename: string): string | null {
 	const match = filename.match(/(Q\d+_[A-Z0-9]+|F16|F32|Q4_0|Q5_0|Q8_0)/i)
@@ -54,16 +54,19 @@ function enginesOf(group: CatalogGroup) {
 	return [...new Set(group.models.map((model) => model.engine))].join(' / ')
 }
 
-export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
-	const [editingPath, setEditingPath] = useState<string | null>(null)
-	const [editingName, setEditingName] = useState('')
+export function ModelsSection({ vm, tab }: { vm: SettingsViewModel; tab: string }) {
+	if (tab === 'installed') return <InstalledTab vm={vm} />
+	if (tab === 'storage') return <StorageTab vm={vm} />
+	return <CatalogTab vm={vm} />
+}
+
+function CatalogTab({ vm }: { vm: SettingsViewModel }) {
 	const [installingId, setInstallingId] = useState<string | null>(null)
 	const [installProgress, setInstallProgress] = useState(0)
 	const [installed, setInstalled] = useState<Record<string, boolean>>({})
 	// Fold the catalog per engine family; the NVIDIA group (with the recommended
 	// models) starts expanded so the usual choice is one click away.
 	const [expanded, setExpanded] = useState<Record<string, boolean>>({ nvidia: true })
-	const currentModel = vm.models.find((model) => model.path === vm.preference.modelPath)
 	const { downloadCatalogModel } = useModelDownload()
 
 	// Live progress bar for catalog downloads (the Rust side emits `download_progress`).
@@ -108,119 +111,120 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 	}
 
 	return (
-		<div className="space-y-5">
-			<SectionCard>
-				<div className="space-y-4">
-					<div className="space-y-1">
-						<Label>{m.modelCatalog()}</Label>
-						<p className="text-xs text-muted-foreground">{m.modelCatalogInfo()}</p>
-					</div>
-					<div className="space-y-2">
-						{CATALOG_GROUPS.map((group) => {
-							const open = expanded[group.id] ?? false
-							const installedCount = group.models.filter((model) => installed[model.id]).length
-							return (
-								<div key={group.id} className="overflow-hidden rounded-xl border border-border/55">
-									<button
-										type="button"
-										onClick={() => setExpanded((prev) => ({ ...prev, [group.id]: !open }))}
-										className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/40">
-										<ChevronRight className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')} />
-										<span className="min-w-0 flex-1">
-											<span className="flex flex-wrap items-center gap-2">
-												<span className="truncate text-sm font-medium">{group.name}</span>
-												<span className={engineBadge(group.engine)}>{enginesOf(group)}</span>
-												<span className="text-[11px] text-muted-foreground">
-													{installedCount > 0
-														? `${installedCount}/${group.models.length} ${m.installed()}`
-														: m.modelsCount({ count: String(group.models.length) })}
-												</span>
-											</span>
-											<span className="mt-0.5 block text-[11px] text-muted-foreground">
-												{(GROUP_HINTS[group.hintKey] ?? (() => ''))()}
+		<AdaptiveSections>
+			<SettingsGroup title={m.modelCatalog()} description={m.modelCatalogInfo()}>
+				<SettingPanel id="modelCatalog" className="space-y-2">
+					{CATALOG_GROUPS.map((group) => {
+						const open = expanded[group.id] ?? false
+						const installedCount = group.models.filter((model) => installed[model.id]).length
+						return (
+							<div key={group.id} className="overflow-hidden rounded-xl border border-border/55">
+								<button
+									type="button"
+									onClick={() => setExpanded((prev) => ({ ...prev, [group.id]: !open }))}
+									className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-accent/40">
+									<ChevronRight className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')} />
+									<span className="min-w-0 flex-1">
+										<span className="flex flex-wrap items-center gap-2">
+											<span className="truncate text-sm font-medium">{group.name}</span>
+											<span className={engineBadge(group.engine)}>{enginesOf(group)}</span>
+											<span className="text-[11px] text-muted-foreground">
+												{installedCount > 0
+													? `${installedCount}/${group.models.length} ${m.installed()}`
+													: m.modelsCount({ count: String(group.models.length) })}
 											</span>
 										</span>
-									</button>
-									{open && (
-										<div className="divide-y divide-border/45 border-t border-border/45">
-											{group.models.map((entry) => {
-												const isInstalled = installed[entry.id] === true
-												const busy = installingId === entry.id
-												return (
-													<div key={entry.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
-														<div className="min-w-0 flex-1">
-															<div className="flex flex-wrap items-center gap-1.5 ps-6">
-																<span className="truncate text-sm font-medium">{entry.name}</span>
-																{entry.quantization && (
-																	<span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-																		{entry.quantization}
-																	</span>
-																)}
-																{entry.recommended && (
-																	<span className="rounded bg-primary/12 px-1.5 py-0.5 text-[10px] font-medium text-primary">{m.recommended()}</span>
-																)}
-															</div>
-															<div className="mt-1 flex flex-wrap items-center gap-2 ps-6 text-[11px] text-muted-foreground">
-																<span>
-																	{entry.languageCount != null
-																		? m.languagesCount({ count: String(entry.languageCount) })
-																		: (entry.languageCodes ?? []).join(' · ')}
-																</span>
-																<span>{formatSize(entry.sizeMB)}</span>
-																{entry.requiresVad && <span>{m.needsVadModel()}</span>}
-															</div>
-															{busy && <Progress className="mt-2 h-1.5 ps-6" value={installProgress} />}
+										<span className="mt-0.5 block text-[11px] text-muted-foreground">{(GROUP_HINTS[group.hintKey] ?? (() => ''))()}</span>
+									</span>
+								</button>
+								{open && (
+									<div className="divide-y divide-border/45 border-t border-border/45">
+										{group.models.map((entry) => {
+											const isInstalled = installed[entry.id] === true
+											const busy = installingId === entry.id
+											return (
+												<div key={entry.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5">
+													<div className="min-w-0 flex-1">
+														<div className="flex flex-wrap items-center gap-1.5 ps-6">
+															<span className="truncate text-sm font-medium">{entry.name}</span>
+															{entry.quantization && <StateBadge>{entry.quantization}</StateBadge>}
+															{entry.recommended && <StateBadge tone="primary">{m.recommended()}</StateBadge>}
 														</div>
-														<Button
-															size="sm"
-															variant={isInstalled ? 'ghost' : 'default'}
-															disabled={busy || installingId !== null}
-															onClick={() => install(entry)}>
-															{busy ? m.downloadingModel() : isInstalled ? m.installed() : m.download()}
-														</Button>
+														<div className="mt-1 flex flex-wrap items-center gap-2 ps-6 text-[11px] text-muted-foreground">
+															<span>
+																{entry.languageCount != null
+																	? m.languagesCount({ count: String(entry.languageCount) })
+																	: (entry.languageCodes ?? []).join(' · ')}
+															</span>
+															<span>{formatSize(entry.sizeMB)}</span>
+															{entry.requiresVad && <span>{m.needsVadModel()}</span>}
+														</div>
+														{busy && <Progress className="mt-2 h-1.5 ps-6" value={installProgress} />}
 													</div>
-												)
-											})}
-										</div>
-									)}
-								</div>
-							)
-						})}
-					</div>
-				</div>
-			</SectionCard>
+													<Button
+														size="sm"
+														variant={isInstalled ? 'ghost' : 'default'}
+														className="h-8"
+														disabled={busy || installingId !== null}
+														onClick={() => install(entry)}>
+														{busy ? m.downloadingModel() : isInstalled ? m.installed() : m.download()}
+													</Button>
+												</div>
+											)
+										})}
+									</div>
+								)}
+							</div>
+						)
+					})}
+				</SettingPanel>
+			</SettingsGroup>
 
-			<SectionCard>
-				<div className="space-y-5">
-					<div className="space-y-2">
-						<Label>{m.downloadModel()}</Label>
+			<SettingsGroup title={m.downloadModel()}>
+				<SettingRow
+					id="downloadModel"
+					vertical
+					control={
 						<div className="flex items-center gap-2">
 							<Input
 								type="text"
 								value={vm.downloadURL}
 								onChange={(event) => vm.setDownloadURL(event.target.value)}
 								placeholder={m.pasteModelLink()}
+								className="h-9"
 								onKeyDown={(event) => (event.key === 'Enter' ? vm.downloadModel() : null)}
 							/>
-							<Button variant="default" size="icon" onClick={vm.downloadModel} className="shrink-0" aria-label={m.downloadModel()}>
-								<svg
-									aria-hidden="true"
-									focusable="false"
-									role="img"
-									className="octicon octicon-download"
-									viewBox="0 0 16 16"
-									width="16"
-									height="16"
-									fill="currentColor">
-									<path d="M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z"></path>
-									<path d="M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z"></path>
-								</svg>
+							<Button variant="default" size="sm" className="h-9 shrink-0 gap-1.5" onClick={vm.downloadModel}>
+								<Download className="h-3.5 w-3.5" />
+								{m.downloadModel()}
 							</Button>
 						</div>
-					</div>
+					}
+				/>
+			</SettingsGroup>
+		</AdaptiveSections>
+	)
+}
 
-					<div className="space-y-2">
-						<Label>{m.selectModel()}</Label>
+function InstalledTab({ vm }: { vm: SettingsViewModel }) {
+	const [editingPath, setEditingPath] = useState<string | null>(null)
+	const [editingName, setEditingName] = useState('')
+	const currentModel = vm.models.find((model) => model.path === vm.preference.modelPath)
+
+	function commitRename() {
+		if (!currentModel) return
+		const name = editingName.trim()
+		if (name) vm.preference.setModelDisplayNames({ ...vm.preference.modelDisplayNames, [currentModel.path]: name })
+		setEditingPath(null)
+	}
+
+	return (
+		<div className="space-y-5">
+			<SettingsGroup title={m.selectModel()} description={m.selectedModelInfo()}>
+				<SettingRow
+					id="selectedModel"
+					vertical
+					control={
 						<div className="space-y-2">
 							<Select
 								value={vm.selectedGroupPath ?? undefined}
@@ -228,7 +232,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 								onOpenChange={(open) => {
 									if (open) vm.loadModels()
 								}}>
-								<SelectTrigger>
+								<SelectTrigger className="h-9">
 									<SelectValue placeholder={m.selectModel()} />
 								</SelectTrigger>
 								<SelectContent>
@@ -240,11 +244,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 											<SelectItem key={index} value={group.path}>
 												<span className="flex items-center gap-2">
 													{group.name}
-													{fileCount > 1 && (
-														<span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-															{fileCount} files
-														</span>
-													)}
+													{fileCount > 1 && <StateBadge>{`${fileCount} ${m.files()}`}</StateBadge>}
 													<span className={engineBadge(modelType)}>{pipeline.engine}</span>
 												</span>
 											</SelectItem>
@@ -252,11 +252,10 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 									})}
 								</SelectContent>
 							</Select>
+
 							{vm.modelFiles.length > 1 && (
-								<Select
-									value={vm.preference.modelPath ?? undefined}
-									onValueChange={vm.selectModel}>
-									<SelectTrigger>
+								<Select value={vm.preference.modelPath ?? undefined} onValueChange={vm.selectModel}>
+									<SelectTrigger className="h-9">
 										<SelectValue placeholder={m.selectModel()} />
 									</SelectTrigger>
 									<SelectContent>
@@ -267,11 +266,7 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 												<SelectItem key={index} value={file.path}>
 													<span className="flex items-center gap-2">
 														{display}
-														{quant && (
-															<span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-																{quant}
-															</span>
-														)}
+														{quant && <StateBadge>{quant}</StateBadge>}
 													</span>
 												</SelectItem>
 											)
@@ -279,107 +274,93 @@ export function ModelsSection({ vm }: { vm: SettingsViewModel }) {
 									</SelectContent>
 								</Select>
 							)}
-						</div>
-							{currentModel && (editingPath === currentModel.path ? (
-								<div className="flex items-center gap-2">
-									<Input autoFocus value={editingName} onChange={(event) => setEditingName(event.target.value)} onKeyDown={(event) => {
-										if (event.key === 'Enter') {
-											const name = editingName.trim()
-											if (name) vm.preference.setModelDisplayNames({ ...vm.preference.modelDisplayNames, [currentModel.path]: name })
-											setEditingPath(null)
-										}
-										if (event.key === 'Escape') setEditingPath(null)
-									}} />
-									<Button size="sm" onClick={() => {
-										const name = editingName.trim()
-										if (name) vm.preference.setModelDisplayNames({ ...vm.preference.modelDisplayNames, [currentModel.path]: name })
-										setEditingPath(null)
-									}}>{m.save()}</Button>
-									<Button variant="ghost" size="sm" onClick={() => setEditingPath(null)}>{m.cancel()}</Button>
-								</div>
-							) : (
-								<div className="mt-2 flex items-center justify-end gap-1 px-1">
-									<Button variant="ghost" size="sm" className="h-7 px-2.5 text-muted-foreground hover:text-foreground" onClick={() => vm.openSelectedModel(currentModel.path)}>
-										<FolderOpen className="size-3.5" /> {m.showInFolder()}
-									</Button>
-									<Button variant="ghost" size="sm" className="h-7 px-2.5 text-muted-foreground hover:text-foreground" onClick={() => { setEditingPath(currentModel.path); setEditingName(vm.preference.modelDisplayNames[currentModel.path] ?? getFriendlyModelName(currentModel.name)) }}>
-										<PencilLine className="size-3.5" /> {m.rename()}
-									</Button>
-									{vm.deleteModel && (
-										<Button variant="ghost" size="sm" className="h-7 px-2.5 text-destructive hover:text-destructive" onClick={() => vm.deleteModel(currentModel.path)}>
-											<Trash2 className="size-3.5" /> {m.remove()}
+
+							{vm.models.length === 0 && <EmptyHint>{m.noModelsInstalled()}</EmptyHint>}
+
+							{currentModel &&
+								(editingPath === currentModel.path ? (
+									<div className="flex items-center gap-2">
+										<Input
+											autoFocus
+											value={editingName}
+											className="h-9"
+											onChange={(event) => setEditingName(event.target.value)}
+											onKeyDown={(event) => {
+												if (event.key === 'Enter') commitRename()
+												if (event.key === 'Escape') setEditingPath(null)
+											}}
+										/>
+										<Button size="sm" className="h-9" onClick={commitRename}>
+											{m.save()}
 										</Button>
-									)}
-								</div>
-							))}
-							<Button
-								variant="outline"
-								size="sm"
-								className="mt-2 h-10 w-full justify-between px-3"
-								disabled={!vm.preference.modelPath}
-								onMouseDown={() => openModelSettings(vm.preference.modelPath)}>
-								{m.modelSettings()}
-								<Settings2 className="size-3.5" />
-							</Button>
+										<Button variant="ghost" size="sm" className="h-9" onClick={() => setEditingPath(null)}>
+											{m.cancel()}
+										</Button>
+									</div>
+								) : (
+									<div className="flex flex-wrap items-center gap-1">
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+											onClick={() => vm.openSelectedModel(currentModel.path)}>
+											<FolderOpen className="size-3.5" /> {m.showInFolder()}
+										</Button>
+										<Button
+											variant="ghost"
+											size="sm"
+											className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+											onClick={() => {
+												setEditingPath(currentModel.path)
+												setEditingName(vm.preference.modelDisplayNames[currentModel.path] ?? getFriendlyModelName(currentModel.name))
+											}}>
+											<PencilLine className="size-3.5" /> {m.rename()}
+										</Button>
+										{vm.deleteModel && (
+											<Button
+												variant="ghost"
+												size="sm"
+												className="h-8 gap-1.5 px-2 text-destructive hover:text-destructive"
+												onClick={() => vm.deleteModel(currentModel.path)}>
+												<Trash2 className="size-3.5" /> {m.remove()}
+											</Button>
+										)}
+									</div>
+								))}
 						</div>
+					}
+				/>
+				<SettingRow
+					id="modelSettings"
+					control={
+						<Button
+							variant="outline"
+							size="sm"
+							className="h-8 gap-1.5"
+							disabled={!vm.preference.modelPath}
+							onMouseDown={() => openModelSettings(vm.preference.modelPath)}>
+							{m.modelSettings()}
+							<Settings2 className="size-3.5" />
+						</Button>
+					}
+				/>
+			</SettingsGroup>
+		</div>
+	)
+}
 
-						{!vm.isMacOS && (
-						<div className="space-y-2">
-							<Label>{m.gpuDevice()}</Label>
-							{vm.gpuDevices.length > 0 ? (
-								<Select
-									value={vm.preference.gpuDevice != null ? String(vm.preference.gpuDevice) : 'auto'}
-									onValueChange={(value) => {
-										vm.preference.setGpuDevice(value === 'auto' ? null : parseInt(value, 10))
-									}}>
-									<SelectTrigger>
-										<SelectValue placeholder={m.gpuDevice()} />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="auto">{m.auto()}</SelectItem>
-										{vm.gpuDevices.map((device) => (
-											<SelectItem key={device.index} value={String(device.index)}>
-												{device.description}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							) : (
-								<Input
-									type="number"
-									value={vm.preference.gpuDevice ?? ''}
-									onChange={(e) => {
-										const val = e.target.value
-										vm.preference.setGpuDevice(val === '' ? null : parseInt(val, 10))
-									}}
-									placeholder={m.gpuDevicePlaceholder()}
-								/>
-							)}
-						</div>
-					)}
-
-					<div className="space-y-1 pt-1">
-							<Button
-								variant="ghost"
-								onMouseDown={vm.openModelsUrl}
-								className="h-11 w-full justify-between rounded-lg px-3 font-medium hover:bg-accent/60">
-								{m.downloadModelsLink()} <LinkIcon className="h-4 w-4 text-muted-foreground" />
-							</Button>
-							<Button
-								variant="ghost"
-								onMouseDown={vm.openModelPath}
-								className="h-11 w-full justify-between rounded-lg px-3 font-medium hover:bg-accent/60">
-								{m.modelsFolder()} <FolderIcon className="h-4 w-4 text-muted-foreground" />
-							</Button>
-							<Button
-								variant="ghost"
-								onMouseDown={vm.changeModelsFolder}
-								className="h-11 w-full justify-between rounded-lg px-3 font-medium hover:bg-accent/60">
-								{m.changeModelsFolder()} <WrenchIcon className="h-4 w-4 text-muted-foreground" />
-							</Button>
-						</div>
-					</div>
-				</SectionCard>
-			</div>
+function StorageTab({ vm }: { vm: SettingsViewModel }) {
+	return (
+		<SettingsGroup title={m.modelsFolder()} description={m.modelsFolderInfo()}>
+			<SettingBlock id="modelsFolder" className="p-0">
+				<ActionRow label={m.modelsFolder()} onClick={vm.openModelPath} icon={<FolderIcon className="h-4 w-4 text-muted-foreground" />} />
+			</SettingBlock>
+			<SettingBlock id="changeModelsFolder" className="p-0">
+				<ActionRow label={m.changeModelsFolder()} onClick={vm.changeModelsFolder} icon={<WrenchIcon className="h-4 w-4 text-muted-foreground" />} />
+			</SettingBlock>
+			<SettingBlock id="downloadModelsLink" className="p-0">
+				<ActionRow label={m.downloadModelsLink()} onClick={vm.openModelsUrl} icon={<LinkIcon className="h-4 w-4 text-muted-foreground" />} />
+			</SettingBlock>
+		</SettingsGroup>
 	)
 }

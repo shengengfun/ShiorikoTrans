@@ -3,13 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { listen } from '@tauri-apps/api/event'
 import { platform } from '@tauri-apps/plugin-os'
-import { Bot, History, Languages, ListVideo, Minus, Replace, Search, Settings2, Square, X } from 'lucide-react'
+import { AlertTriangle, Bot, History, Languages, ListVideo, Minus, Replace, Search, Settings2, Square, X } from 'lucide-react'
 import { m } from '~/paraglide/messages.js'
-import { usePreferenceProvider, type RecentFile } from '~/providers/preference'
-import { useFilesContext } from '~/providers/files-provider'
+import { usePreferenceProvider } from '~/providers/preference'
 import { useTranscriptionProvider } from '~/providers/transcription'
 import { useTranslationSession } from '~/providers/translation'
 import { modelDisplayName, modelNameFromPath, useTranscriptionModels, type ModelEntry } from '~/lib/model-list'
+import { useRecentFiles } from '~/lib/use-recent-files'
 import { openModelSettings } from '~/lib/app'
 import { cn } from '~/lib/style'
 import { Button } from './ui/button'
@@ -32,8 +32,8 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const prefs = usePreferenceProvider()
-	const { setFiles } = useFilesContext()
 	const { segments, setSegments, translatedSegments, setTranslatedSegments, summarizeSegments, setSummarizeSegments } = useTranscriptionProvider()
+	const { recent, missing: missingRecents, transcripts, busy: recentsBusy, open: openRecent, remove: removeRecent, clear: clearRecent, prune: pruneRecents } = useRecentFiles()
 	const { source, setSource, output, setOutput } = useTranslationSession()
 	const [searchOpen, setSearchOpen] = useState(false)
 	const [showReplace, setShowReplace] = useState(false)
@@ -86,13 +86,6 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 		}
 	}
 
-	function reopenFile(recent: RecentFile) {
-		prefs.setHomeTab('file')
-		if (location.pathname !== '/') navigate('/')
-		// Let the Home page's location-effect finish clearing state first.
-		window.setTimeout(() => setFiles([{ name: recent.name, path: recent.path }]), 120)
-	}
-
 	// Load available transcription models for the quick-switcher in the title bar
 	const { models } = useTranscriptionModels(prefs.modelPath)
 
@@ -103,7 +96,6 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 		: prefs.modelPath
 			? prefs.modelDisplayNames[prefs.modelPath] ?? modelNameFromPath(prefs.modelPath)
 			: m.selectModel()
-	const recent = [...prefs.recentFiles].sort((a, b) => b.ts - a.ts)
 	const searchableText = [
 		...(segments?.map((segment) => segment.text) ?? []),
 		...(translatedSegments?.map((segment) => segment.text) ?? []),
@@ -181,22 +173,22 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 
 			<Popover open={searchOpen} onOpenChange={setSearchOpen}>
 				<PopoverTrigger asChild>
-					<Button variant="ghost" size="icon" className="rounded-lg" aria-label="搜索与替换" title="搜索与替换 (Ctrl+F / Ctrl+H)">
+					<Button variant="ghost" size="icon" className="rounded-lg" aria-label={m.searchAndReplace()} title={m.searchAndReplace() + ' (Ctrl+F / Ctrl+H)'}>
 						<Search className="h-4 w-4" />
 					</Button>
 				</PopoverTrigger>
 				<PopoverContent align="end" className="w-80 space-y-2 p-3">
-					<div className="flex items-center gap-2"><Search className="h-4 w-4 text-muted-foreground" /><Input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索转录与翻译" /><span className="shrink-0 text-xs text-muted-foreground">{matches}</span></div>
-					{showReplace && <div className="flex items-center gap-2"><Replace className="h-4 w-4 text-muted-foreground" /><Input value={replacement} onChange={(event) => setReplacement(event.target.value)} placeholder="替换为" /></div>}
-					<div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={() => setShowReplace((visible) => !visible)}>{showReplace ? '隐藏替换' : '替换'}</Button>{showReplace && <Button size="sm" disabled={!query || matches === 0} onClick={replaceAll}>全部替换</Button>}</div>
+					<div className="flex items-center gap-2"><Search className="h-4 w-4 text-muted-foreground" /><Input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={m.searchTranscriptPlaceholder()} /><span className="shrink-0 text-xs text-muted-foreground">{matches}</span></div>
+					{showReplace && <div className="flex items-center gap-2"><Replace className="h-4 w-4 text-muted-foreground" /><Input value={replacement} onChange={(event) => setReplacement(event.target.value)} placeholder={m.replaceWith()} /></div>}
+					<div className="flex justify-end gap-2"><Button variant="ghost" size="sm" onClick={() => setShowReplace((visible) => !visible)}>{showReplace ? m.hideReplace() : m.replace()}</Button>{showReplace && <Button size="sm" disabled={!query || matches === 0} onClick={replaceAll}>{m.replaceAll()}</Button>}</div>
 				</PopoverContent>
 			</Popover>
 
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button variant="ghost" size="sm" className="h-9 gap-1.5 rounded-lg px-2.5 text-sm">
+					<Button variant="ghost" size="sm" className="h-9 gap-1.5 rounded-lg px-2.5 text-sm" title={m.recentFiles()}>
 						<History className="h-4 w-4" />
-						<span className="hidden sm:inline">Recent</span>
+						<span className="hidden sm:inline">{m.recentFiles()}</span>
 						{recent.length > 0 && (
 							<span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-primary/15 px-1 text-[11px] font-semibold text-primary">
 								{recent.length}
@@ -204,30 +196,71 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 						)}
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-72 rounded-xl border-border/75 bg-popover/98 p-1.5 shadow-lg">
-					<DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-						{m.files()} · Recent
-					</DropdownMenuLabel>
+				<DropdownMenuContent align="end" className="w-[22rem] rounded-xl border-border/75 bg-popover/98 p-1.5 shadow-lg">
+					<div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+						<span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{m.recentFiles()}</span>
+						{missingRecents.size > 0 && (
+							<button
+								type="button"
+								onClick={() => void pruneRecents()}
+								className="rounded text-[11px] font-medium text-amber-500 underline-offset-2 hover:underline">
+								{m.removeMissingRecents({ count: String(missingRecents.size) })}
+							</button>
+						)}
+					</div>
 					{recent.length === 0 ? (
-						<p className="px-2.5 py-4 text-center text-sm text-muted-foreground">No recent transcripts yet</p>
+						<p className="px-2.5 py-4 text-center text-sm text-muted-foreground">{m.noRecentFiles()}</p>
 					) : (
-						recent.slice(0, 10).map((item) => (
-							<DropdownMenuItem
-								key={item.path}
-								onClick={() => reopenFile(item)}
-								className="flex h-10 items-center gap-2 rounded-md px-2.5 text-sm">
-								<span className="min-w-0 flex-1 truncate" title={item.path}>
-									{item.name}
-								</span>
-								<span className="shrink-0 font-mono text-[11px] text-muted-foreground">
-									{new Date(item.ts).toLocaleDateString()}
-								</span>
-							</DropdownMenuItem>
-						))
+						recent.slice(0, 10).map((item) => {
+							const isMissing = missingRecents.has(item.path)
+							const transcript = transcripts[item.path]
+							return (
+								<DropdownMenuItem
+									key={item.path}
+									disabled={recentsBusy}
+									onClick={() => void openRecent(item)}
+									className="group flex items-start gap-2 rounded-md px-2.5 py-2 text-sm">
+									{isMissing ? (
+										<AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+									) : (
+										<ListVideo className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+									)}
+									<span className="min-w-0 flex-1">
+										<span className="flex items-center gap-1.5">
+											<span className={cn('truncate font-medium', isMissing && !transcript && 'text-muted-foreground line-through')}>{item.name}</span>
+											{transcript ? (
+												<span className="shrink-0 rounded bg-primary/12 px-1 py-0.5 text-[10px] font-medium text-primary">
+													{m.recentTranscriptSegments({ count: transcript.segments.toLocaleString() })}
+												</span>
+											) : (
+												<span className="shrink-0 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">{m.recentFileOnly()}</span>
+											)}
+										</span>
+											<span className="mt-0.5 block truncate font-mono text-[10.5px] font-normal text-muted-foreground/75" title={item.path}>
+												{isMissing ? (transcript ? m.recentSourceMissingHint() : m.recentFileMissingHint()) : item.path}
+											</span>
+									</span>
+									<span className="mt-0.5 shrink-0 font-mono text-[10.5px] text-muted-foreground">{new Date(item.ts).toLocaleDateString()}</span>
+									<button
+										type="button"
+										aria-label={m.remove()}
+										title={m.remove()}
+										onPointerDown={(event) => event.stopPropagation()}
+										onClick={(event) => {
+											event.preventDefault()
+											event.stopPropagation()
+											removeRecent(item.path)
+										}}
+										className="mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100">
+										<X className="h-3.5 w-3.5" />
+									</button>
+								</DropdownMenuItem>
+							)
+						})
 					)}
 					<DropdownMenuSeparator />
-					<DropdownMenuItem onClick={() => prefs.setRecentFiles([])} className="rounded-md text-destructive">
-						Clear history
+					<DropdownMenuItem disabled={recent.length === 0} onClick={clearRecent} className="rounded-md text-destructive">
+						{m.clearRecentFiles()}
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

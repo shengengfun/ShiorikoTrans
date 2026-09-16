@@ -2,6 +2,7 @@ import { UnlistenFn, listen } from '@tauri-apps/api/event'
 import { Dispatch, ReactNode, SetStateAction, createContext, useContext, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import * as transcript from '~/lib/transcript'
+import { saveTranscriptSnapshot, type TranscriptSnapshot } from '~/lib/transcript-store'
 import { useConfirmExit } from '~/lib/use-confirm-exit'
 import { useRecording } from '~/pages/home/hooks/use-recording'
 import { useSummarization } from '~/pages/home/hooks/use-summarization'
@@ -35,6 +36,8 @@ export interface TranscriptionProviderValue {
 	onAbort: () => Promise<void>
 	onForceAbort: () => void
 	activeFile: { name: string; path: string } | null
+	/** Name the session file when restoring a saved transcript. */
+	setActiveFile: Dispatch<SetStateAction<{ name: string; path: string } | null>>
 
 	// Summary
 	summarizeSegments: transcript.Segment[] | null
@@ -60,6 +63,9 @@ export interface TranscriptionProviderValue {
 
 	/** Page-specific cleanup to run when a recording finishes (e.g. clear the folder selection). */
 	registerRecordFinishHook: (hook: (() => void) | null) => void
+
+	/** Replace the session with a transcript stored for a recent file. */
+	restoreTranscript: (snapshot: TranscriptSnapshot) => void
 }
 
 const TranscriptionContext = createContext<TranscriptionProviderValue | null>(null)
@@ -72,18 +78,63 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const preference = usePreferenceProvider()
-	const { setFiles } = useFilesContext()
+	const { openFiles } = useFilesContext()
 
 	const { segments: summarizeSegments, setSegments: setSummarizeSegments, summarizing, transcriptTab, setTranscriptTab, summarize } = useSummarization()
 
-	const { loading, isAborting, showForceAbort, segments, setSegments, translatedSegments, setTranslatedSegments, progress, setProgress, transcribe, onAbort, onForceAbort, activeFile } =
-		useTranscription({
+	const {
+		loading,
+		isAborting,
+		showForceAbort,
+		segments,
+		setSegments,
+		translatedSegments,
+		setTranslatedSegments,
+		progress,
+		setProgress,
+		transcribe,
+		onAbort,
+		onForceAbort,
+		activeFile,
+		setActiveFile,
+	} = useTranscription({
 			onResetSummary: () => {
 				setSummarizeSegments(null)
 				setTranscriptTab('transcript')
 			},
 			onSummarize: summarize,
 		})
+
+	/**
+	 * Keep the transcript of the current session on disk (debounced) so the
+	 * recent list can restore the text instead of asking for another run.
+	 * Runs after the stream settles (`loading` false) and also picks up later
+	 * edits, translations and summaries.
+	 */
+	useEffect(() => {
+		if (loading) return
+		if (!activeFile) return
+		if (!segments?.length && !translatedSegments?.length && !summarizeSegments?.length) return
+		const timer = window.setTimeout(() => {
+			void saveTranscriptSnapshot({
+				path: activeFile.path,
+				name: activeFile.name,
+				segments: segments ?? [],
+				translatedSegments: translatedSegments ?? null,
+				summary: summarizeSegments ?? null,
+			})
+		}, 1200)
+		return () => window.clearTimeout(timer)
+	}, [activeFile, loading, segments, translatedSegments, summarizeSegments])
+
+	/** Load a stored transcript back into the session. */
+	function restoreTranscript(snapshot: TranscriptSnapshot) {
+		setActiveFile({ name: snapshot.name, path: snapshot.path })
+		setSegments(snapshot.segments.length > 0 ? snapshot.segments : null)
+		setTranslatedSegments(snapshot.translatedSegments?.length ? snapshot.translatedSegments : null)
+		setSummarizeSegments(snapshot.summary?.length ? snapshot.summary : null)
+		setTranscriptTab(snapshot.summary?.length ? 'summary' : 'transcript')
+	}
 
 	const recording = useRecording(() => {
 		setSegments(null)
@@ -147,25 +198,18 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 				recordFinishHook.current?.()
 				current.preference.setHomeTab('file')
 				current.recording.setIsRecording(false)
-				if (current.location.pathname !== '/') {
-					navigate('/')
-					// Let the transcription page's location effect finish clearing
-					// the previous file selection first.
-					window.setTimeout(() => {
-						setFiles([{ name, path }])
-						void latest.current.transcribe(path)
-					}, 150)
-				} else {
-					setFiles([{ name, path }])
-					void latest.current.transcribe(path)
-				}
+				// `openFiles` marks the selection as explicit, so the transcription
+				// page keeps it while we navigate there.
+				openFiles([{ name, path }])
+				if (current.location.pathname !== '/') navigate('/')
+				void latest.current.transcribe(path)
 			}),
 		)
 		return () => {
 			if (flushTimer != null) window.clearTimeout(flushTimer)
 			unlisteners.forEach((promise) => promise.then((unlisten) => unlisten()))
 		}
-	}, [navigate, setFiles, setProgress, setSegments])
+	}, [navigate, openFiles, setProgress, setSegments])
 
 	return (
 		<TranscriptionContext.Provider
@@ -183,6 +227,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 				onAbort,
 				onForceAbort,
 				activeFile,
+				setActiveFile,
 				summarizeSegments,
 				setSummarizeSegments,
 				summarizing,
@@ -191,6 +236,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 				summarize,
 				...recording,
 				registerRecordFinishHook,
+				restoreTranscript,
 			}}>
 			{children}
 		</TranscriptionContext.Provider>

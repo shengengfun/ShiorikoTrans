@@ -175,5 +175,22 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 		}
 	}
 
-	return { loading, isAborting, showForceAbort, segments, setSegments, translatedSegments, setTranslatedSegments, progress, setProgress, transcribe, onAbort, onForceAbort, activeFile }
+	return {
+		loading,
+		isAborting,
+		showForceAbort,
+		segments,
+		setSegments,
+		translatedSegments,
+		setTranslatedSegments,
+		progress,
+		setProgress,
+		transcribe,
+		onAbort,
+		onForceAbort,
+		activeFile,
+		// Restoring a saved transcript has to name the session file too, otherwise
+		// saving/exporting would fall back to a generic name.
+		setActiveFile,
+	}
 }

@@ -499,6 +499,7 @@ export function viewModel() {
 		defaultRecordingPath,
 		gpuDevices,
 		setGpuDevices,
+		loadGpuDevices,
 		isMacOS,
 		llm,
 		llmError,

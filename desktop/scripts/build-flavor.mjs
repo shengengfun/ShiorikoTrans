@@ -12,7 +12,7 @@
  * what decides success here.
  */
 import { spawnSync } from 'node:child_process'
-import { readdirSync, renameSync } from 'node:fs'
+import { readFileSync, readdirSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 
 const flavor = process.argv[2] ?? 'full'
@@ -33,17 +33,20 @@ if (build.error) {
 }
 
 const nsisDir = join(process.cwd(), '..', 'target', 'release', 'bundle', 'nsis')
+// Old installers stay in the folder, so match the version being built instead of
+// expecting the directory to hold a single file.
+const version = JSON.parse(readFileSync(join(process.cwd(), 'src-tauri', 'tauri.conf.json'), 'utf8')).version
+const expected = `ShiorikoTrans_${version}_x64-setup.exe`
 const plain = readdirSync(nsisDir).filter((name) => /_x64-setup\.exe$/.test(name))
-if (plain.length !== 1) {
-	console.error(`expected exactly one installer in ${nsisDir}, found: ${plain.join(', ') || 'none'}`)
+if (!plain.includes(expected)) {
+	console.error(`expected ${expected} in ${nsisDir}, found: ${plain.join(', ') || 'none'}`)
 	process.exit(1)
 }
 
 if (flavor === 'slim') {
-	const from = plain[0]
-	const to = from.replace(/-setup\.exe$/, '-setup-slim.exe')
-	renameSync(join(nsisDir, from), join(nsisDir, to))
+	const to = expected.replace(/-setup\.exe$/, '-setup-slim.exe')
+	renameSync(join(nsisDir, expected), join(nsisDir, to))
 	console.log(`installer: ${to}`)
 } else {
-	console.log(`installer: ${plain[0]}`)
+	console.log(`installer: ${expected}`)
 }

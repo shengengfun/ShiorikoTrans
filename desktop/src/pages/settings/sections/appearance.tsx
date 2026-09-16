@@ -1,14 +1,14 @@
 import { open } from '@tauri-apps/plugin-dialog'
-import { Check } from 'lucide-react'
+import { Check, Image as ImageIcon, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { m } from '~/paraglide/messages.js'
 import { ACCENT_PRESETS, DEFAULT_ACCENT_ID, THEME_PALETTES, accentHex, hexToHsl, hslToHex } from '~/lib/appearance'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
-import { SectionCard, type SettingsViewModel } from './shared'
 import { cn } from '~/lib/style'
 import type { ThemeMode } from '~/providers/preference'
+import { SettingRow, SettingsGroup } from '../components/kit'
+import type { SettingsViewModel } from './shared'
 
 const THEME_MODE_OPTIONS: { value: ThemeMode; label: () => string }[] = [
 	{ value: 'system', label: () => m.followSystem() },
@@ -68,7 +68,11 @@ function ColorDot({
 			onClick={onClick}
 			className={cn(
 				'relative flex h-8 w-8 items-center justify-center rounded-full border transition-transform hover:scale-110',
-				selected ? 'border-foreground ring-2 ring-foreground/25' : dashed ? 'border-dashed border-border/70 hover:border-foreground/40' : 'border-black/10 dark:border-white/15',
+				selected
+					? 'border-foreground ring-2 ring-foreground/25'
+					: dashed
+						? 'border-dashed border-border/70 hover:border-foreground/40'
+						: 'border-black/10 dark:border-white/15',
 			)}
 			style={{ backgroundColor: color }}>
 			{children ?? (selected && <Check className="h-4 w-4" style={{ color: 'hsl(0 0% 100%)' }} />)}
@@ -132,10 +136,7 @@ function CustomColorPicker({ color, onChange }: { color: string; onChange: (hex:
 				aria-label={m.saturationLabel()}
 				onChange={(event) => commit(hsl.h, Number(event.target.value), hsl.l)}
 				className="color-slider"
-				style={{
-					color: current,
-					backgroundImage: `linear-gradient(to right, hsl(${hsl.h} 0% ${hsl.l}%), hsl(${hsl.h} 100% ${hsl.l}%))`,
-				}}
+				style={{ color: current, backgroundImage: `linear-gradient(to right, hsl(${hsl.h} 0% ${hsl.l}%), hsl(${hsl.h} 100% ${hsl.l}%))` }}
 			/>
 			<input
 				type="range"
@@ -189,135 +190,143 @@ export function AppearanceSection({ vm }: { vm: SettingsViewModel }) {
 
 	return (
 		<div className="space-y-5">
-			{/* Theme mode: follow system / light / dark */}
-			<SectionCard>
-				<div className="space-y-2">
-					<Label>{m.theme()}</Label>
-					<div className="flex h-9 items-center gap-1 rounded-lg border border-border/55 bg-muted/40 p-1">
-						{THEME_MODE_OPTIONS.map((option) => (
-							<button
-								key={option.value}
-								type="button"
-								onClick={() => prefs.setThemeMode(option.value)}
-								className={cn(
-									'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-									prefs.themeMode === option.value ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
-								)}>
-								{option.label()}
-							</button>
-						))}
-					</div>
-					{prefs.themeMode === 'system' && (
-						<p className="text-xs text-muted-foreground">
-							{m.systemThemeNow()} · {prefs.theme === 'dark' ? m.dark() : m.light()}
-						</p>
-					)}
-				</div>
-			</SectionCard>
+			<SettingsGroup title={m.theme()}>
+				<SettingRow
+					id="themeMode"
+					vertical
+					control={
+						<div className="space-y-2">
+							<div className="flex h-9 max-w-80 items-center gap-1 rounded-lg border border-border/55 bg-muted/40 p-1">
+								{THEME_MODE_OPTIONS.map((option) => (
+									<button
+										key={option.value}
+										type="button"
+										onClick={() => prefs.setThemeMode(option.value)}
+										className={cn(
+											'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+											prefs.themeMode === option.value ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
+										)}>
+										{option.label()}
+									</button>
+								))}
+							</div>
+							{prefs.themeMode === 'system' && (
+								<p className="text-xs text-muted-foreground">
+									{m.systemThemeNow()} · {prefs.theme === 'dark' ? m.dark() : m.light()}
+								</p>
+							)}
+						</div>
+					}
+				/>
+			</SettingsGroup>
 
-			{/* Neutral palette (surfaces) — available for both light and dark */}
-			<SectionCard>
-				<div className="space-y-2">
-					<Label>{m.themePalette()}</Label>
-					<div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-						{THEME_PALETTES.map((palette) => {
-							const selected = prefs.themePalette === palette.id
-							const background = prefs.theme === 'dark' ? palette.previewDark : palette.previewLight
-							// The default palette keeps the values from globals.css, so fall back to them.
-							const card =
-								(prefs.theme === 'dark' ? palette.dark.card : palette.light.card) ?? (prefs.theme === 'dark' ? 'hsl(220 9% 16%)' : 'hsl(0 0% 100%)')
-							const line =
-								(prefs.theme === 'dark' ? palette.dark.border : palette.light.border) ?? (prefs.theme === 'dark' ? 'hsl(220 8% 34%)' : 'hsl(208 22% 83%)')
-							return (
-								<button
-									key={palette.id}
-									type="button"
-									onClick={() => prefs.setThemePalette(palette.id)}
-									className={cn(
-										'flex items-center gap-3 rounded-xl border p-2.5 text-left transition-colors',
-										selected ? 'border-primary bg-primary/8' : 'border-border/60 hover:border-foreground/30 hover:bg-accent/40',
-									)}>
-									{/* Mini window preview: surface + card + accent dot */}
-									<span
-										className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg border border-black/5 dark:border-white/10"
-										style={{ backgroundColor: background }}>
-										<span className="flex h-6 w-10 items-center gap-1 rounded-[5px] border px-1" style={{ backgroundColor: card, borderColor: line }}>
-											<span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: activeHex }} />
-											<span className="h-1 flex-1 rounded-full" style={{ backgroundColor: line }} />
+			<SettingsGroup title={m.themePalette()}>
+				<SettingRow
+					id="themePalette"
+					vertical
+					control={
+						<div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+							{THEME_PALETTES.map((palette) => {
+								const selected = prefs.themePalette === palette.id
+								const background = prefs.theme === 'dark' ? palette.previewDark : palette.previewLight
+								// The default palette keeps the values from globals.css, so fall back to them.
+								const card =
+									(prefs.theme === 'dark' ? palette.dark.card : palette.light.card) ?? (prefs.theme === 'dark' ? 'hsl(220 9% 16%)' : 'hsl(0 0% 100%)')
+								const line =
+									(prefs.theme === 'dark' ? palette.dark.border : palette.light.border) ?? (prefs.theme === 'dark' ? 'hsl(220 8% 34%)' : 'hsl(208 22% 83%)')
+								return (
+									<button
+										key={palette.id}
+										type="button"
+										onClick={() => prefs.setThemePalette(palette.id)}
+										className={cn(
+											'flex items-center gap-3 rounded-xl border p-2.5 text-left transition-colors',
+											selected ? 'border-primary bg-primary/8' : 'border-border/60 hover:border-foreground/30 hover:bg-accent/40',
+										)}>
+										{/* Mini window preview: surface + card + accent dot */}
+										<span
+											className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg border border-black/5 dark:border-white/10"
+											style={{ backgroundColor: background }}>
+											<span className="flex h-6 w-10 items-center gap-1 rounded-[5px] border px-1" style={{ backgroundColor: card, borderColor: line }}>
+												<span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: activeHex }} />
+												<span className="h-1 flex-1 rounded-full" style={{ backgroundColor: line }} />
+											</span>
 										</span>
-									</span>
-									<span className="min-w-0 flex-1">
-										<span className="block truncate text-sm font-medium">{(PALETTE_LABELS[palette.id] ?? (() => palette.name))()}</span>
-										<span className="block text-[11px] text-muted-foreground">
-											{prefs.theme === 'dark' ? m.dark() : m.light()}
+										<span className="min-w-0 flex-1">
+											<span className="block truncate text-sm font-medium">{(PALETTE_LABELS[palette.id] ?? (() => palette.name))()}</span>
+											<span className="block text-[11px] text-muted-foreground">{prefs.theme === 'dark' ? m.dark() : m.light()}</span>
 										</span>
-									</span>
-									{selected && <Check className="h-4 w-4 shrink-0 text-primary" />}
-								</button>
-							)
-						})}
-					</div>
-				</div>
-			</SectionCard>
+										{selected && <Check className="h-4 w-4 shrink-0 text-primary" />}
+									</button>
+								)
+							})}
+						</div>
+					}
+				/>
+			</SettingsGroup>
 
-			{/* Accent colour — Nijigasaki character colours + custom picker */}
-			<SectionCard>
-				<div className="space-y-3">
-					<div className="flex flex-wrap items-center justify-between gap-2">
-						<Label>{m.accentColor()}</Label>
-						{custom && (
-							<Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground" onClick={() => prefs.setAccentCustomColor(null)}>
-								{m.resetCustom()}
-							</Button>
-						)}
-					</div>
-					<div className="flex flex-wrap items-center gap-2">
-						{ACCENT_PRESETS.map((preset) => (
-							<ColorDot
-								key={preset.id}
-								color={preset.color}
-								label={colorLabel(preset.label, preset.id)}
-								selected={activePreset === preset.id}
-								onClick={() => {
-									prefs.setAccentPreset(preset.id)
-									prefs.setAccentCustomColor(null)
-								}}
-							/>
-						))}
-						<ColorDot
-							color={custom ?? '#37b484'}
-							label={m.colorCustom()}
-							dashed={!custom}
-							selected={Boolean(custom)}
-							onClick={() => prefs.setAccentCustomColor(custom ?? activeHex)}>
-							{!custom && <span className="text-xs font-bold text-muted-foreground">#</span>}
-						</ColorDot>
-					</div>
-					{custom && <CustomColorPicker color={custom} onChange={prefs.setAccentCustomColor} />}
-				</div>
-			</SectionCard>
+			<SettingsGroup title={m.accentColor()}>
+				<SettingRow
+					id="accentColor"
+					vertical
+					control={
+						<div className="space-y-3">
+							<div className="flex flex-wrap items-center gap-2">
+								{ACCENT_PRESETS.map((preset) => (
+									<ColorDot
+										key={preset.id}
+										color={preset.color}
+										label={colorLabel(preset.label, preset.id)}
+										selected={activePreset === preset.id}
+										onClick={() => {
+											prefs.setAccentPreset(preset.id)
+											prefs.setAccentCustomColor(null)
+										}}
+									/>
+								))}
+								<ColorDot
+									color={custom ?? '#37b484'}
+									label={m.colorCustom()}
+									dashed={!custom}
+									selected={Boolean(custom)}
+									onClick={() => prefs.setAccentCustomColor(custom ?? activeHex)}>
+									{!custom && <span className="text-xs font-bold text-muted-foreground">#</span>}
+								</ColorDot>
+							</div>
+							{custom && <CustomColorPicker color={custom} onChange={prefs.setAccentCustomColor} />}
+						</div>
+					}
+				/>
+			</SettingsGroup>
 
-			{/* Custom background image */}
-			<SectionCard>
-				<div className="space-y-2">
-					<Label>{m.customBackground()}</Label>
-					<div className="flex flex-wrap items-center gap-2">
-						<Button variant="outline" onClick={pickBackground}>
-							{m.chooseImage()}
-						</Button>
-						{prefs.customBackground && (
-							<Button variant="ghost" onClick={() => prefs.setCustomBackground(null)}>
-								{m.remove()}
-							</Button>
-						)}
-					</div>
-					{prefs.customBackground && <p className="truncate font-mono text-xs text-muted-foreground">{prefs.customBackground}</p>}
-				</div>
-			</SectionCard>
-
-			<SectionCard>
-				<p className="text-sm leading-relaxed text-muted-foreground">{m.appearanceInfo()}</p>
-			</SectionCard>
+			<SettingsGroup title={m.customBackground()}>
+				<SettingRow
+					id="customBackground"
+					vertical
+					control={
+						<div className="space-y-2">
+							<div className="flex flex-wrap items-center gap-2">
+								<Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={pickBackground}>
+									<ImageIcon className="h-3.5 w-3.5" />
+									{m.chooseImage()}
+								</Button>
+								{prefs.customBackground && (
+									<>
+										<span className="min-w-0 flex-1 truncate font-mono text-[11px] text-muted-foreground" title={prefs.customBackground}>
+											{prefs.customBackground}
+										</span>
+										<Button variant="ghost" size="sm" className="h-8 gap-1.5" onClick={() => prefs.setCustomBackground(null)}>
+											<X className="h-3.5 w-3.5" />
+											{m.remove()}
+										</Button>
+									</>
+								)}
+							</div>
+							<p className="text-xs leading-relaxed text-muted-foreground">{m.appearanceInfo()}</p>
+						</div>
+					}
+				/>
+			</SettingsGroup>
 		</div>
 	)
 }

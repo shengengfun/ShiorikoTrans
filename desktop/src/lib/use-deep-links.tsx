@@ -1,6 +1,6 @@
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link'
 import { m } from '~/paraglide/messages.js'
-import { ModifyState, NamedPath } from './types'
+import { NamedPath } from './types'
 import { pathToNamedPath } from './fs'
 import { ask } from '@tauri-apps/plugin-dialog'
 import * as config from '~/lib/config'
@@ -10,7 +10,7 @@ import * as os from '@tauri-apps/plugin-os'
 import { invoke } from '@tauri-apps/api/core'
 
 interface UseDeepLinksProps {
-	setFiles: ModifyState<NamedPath[]>
+	setFiles: (files: NamedPath[]) => void
 }
 
 export function useDeepLinks({ setFiles }: UseDeepLinksProps) {
@@ -34,7 +34,9 @@ export function useDeepLinks({ setFiles }: UseDeepLinksProps) {
 				newFiles.push(newFile)
 			}
 		}
+		if (newFiles.length === 0) return
 		setFiles(newFiles)
+		navigate('/')
 	}
 
 	async function handleArgv() {

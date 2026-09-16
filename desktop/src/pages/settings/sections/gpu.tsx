@@ -1,121 +1,177 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { Cpu, RefreshCw, ScanSearch } from 'lucide-react'
+import { toast } from 'sonner'
 import { m } from '~/paraglide/messages.js'
-import { InfoTooltip } from '~/components/info-tooltip'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Switch } from '~/components/ui/switch'
+import { AdaptiveSections, EmptyHint, SettingPanel, SettingRow, SettingsGroup, StateBadge } from '../components/kit'
+import type { SettingsViewModel } from './shared'
 
-import { SectionCard, type SettingsViewModel } from './shared'
-import { invoke } from '@tauri-apps/api/core'
-import { toast } from 'sonner'
+interface GpuDeviceInfo {
+	index: number
+	name: string
+	description: string
+	type: string
+}
 
-export function GpuSection({ vm }: { vm: SettingsViewModel }) {
+export function GpuSection({ vm, tab }: { vm: SettingsViewModel; tab: string }) {
+	if (tab === 'diagnostics') return <DiagnosticsTab vm={vm} />
+	return <AccelerationTab vm={vm} />
+}
+
+function AccelerationTab({ vm }: { vm: SettingsViewModel }) {
+	const preference = vm.preference
+	const requestedDevices = useRef(false)
+
+	// Device enumeration spawns a helper process, so only pay for it once per
+	// mount instead of on every render (`vm` is a fresh object each time).
+	useEffect(() => {
+		if (requestedDevices.current) return
+		requestedDevices.current = true
+		void vm.loadGpuDevices()
+	}, [vm])
+
+	return (
+		<div className="space-y-5">
+			<SettingsGroup title={m.hardwareAcceleration()} description={m.sectionGpuDesc()}>
+				<SettingRow
+					id="acceleratorDevice"
+					control={
+						vm.gpuDevices.length > 0 ? (
+							<Select
+								value={preference.gpuDevice != null ? String(preference.gpuDevice) : 'auto'}
+								onValueChange={(value) => preference.setGpuDevice(value === 'auto' ? null : parseInt(value, 10))}>
+								<SelectTrigger className="h-9 w-64">
+									<SelectValue placeholder={m.gpuDevice()} />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="auto">{m.auto()}</SelectItem>
+									{vm.gpuDevices.map((device) => (
+										<SelectItem key={device.index} value={String(device.index)}>
+											{device.description}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						) : (
+							<Input
+								type="number"
+								className="h-9 w-28 tabular-nums"
+								value={preference.gpuDevice ?? ''}
+								onChange={(event) => preference.setGpuDevice(event.target.value === '' ? null : parseInt(event.target.value, 10))}
+								placeholder={m.gpuDevicePlaceholder()}
+							/>
+						)
+					}
+				/>
+				<SettingRow id="forceCpu" control={<Switch checked={preference.forceCpu} onCheckedChange={preference.setForceCpu} />} />
+				<SettingRow
+					id="vulkanDevice"
+					control={
+						<Input
+							type="number"
+							className="h-9 w-28 tabular-nums"
+							value={preference.vulkanDevice ?? ''}
+							onChange={(event) => preference.setVulkanDevice(event.target.value === '' ? null : parseInt(event.target.value, 10))}
+							placeholder={m.auto()}
+						/>
+					}
+				/>
+				<SettingRow
+					id="modelQuantization"
+					control={
+						<Input
+							className="h-9 w-40 font-mono text-xs"
+							value={preference.modelQuantization}
+							onChange={(event) => preference.setModelQuantization(event.target.value)}
+							placeholder="auto"
+						/>
+					}
+				/>
+				<SettingRow id="enableDiagnostics" control={<Switch checked={preference.enableDiagnostics} onCheckedChange={preference.setEnableDiagnostics} />} />
+			</SettingsGroup>
+		</div>
+	)
+}
+
+function DiagnosticsTab({ vm }: { vm: SettingsViewModel }) {
 	const [detecting, setDetecting] = useState(false)
-	const [vulkanInfo, setVulkanInfo] = useState<string | null>(null)
+	const [devices, setDevices] = useState<GpuDeviceInfo[]>(vm.gpuDevices as GpuDeviceInfo[])
+	const [vulkanInfo, setVulkanInfo] = useState<string[] | null>(null)
 
-	async function detectGpu() {
+	async function detect() {
 		setDetecting(true)
 		try {
-			const devices = await invoke<Array<{ index: number; name: string; description: string; type: string }>>('get_gpu_devices')
-			vm.setGpuDevices(devices as any)
-			if (devices.length === 0) {
-				toast.warning('未检测到 GPU 设备')
-			} else {
-				toast.success(`检测到 ${devices.length} 个 GPU 设备`)
-			}
+			const found = await invoke<GpuDeviceInfo[]>('get_gpu_devices')
+			setDevices(found)
+			vm.setGpuDevices(found as SettingsViewModel['gpuDevices'])
+			if (found.length === 0) toast.warning(m.noGpuFound())
+			else toast.success(m.gpuDetected({ count: String(found.length) }))
 		} catch (error) {
-			console.error(error)
-			toast.error('GPU 设备检测失败')
+			console.error('gpu detection failed:', error)
+			toast.error(m.gpuDetectFailed())
 		} finally {
 			setDetecting(false)
 		}
 	}
 
-	async function checkVulkan() {
+	async function showVulkan() {
 		try {
-			const devices = await invoke<Array<{ index: number; name: string; description: string; type: string }>>('get_gpu_devices')
-			const info = devices.map((d) => `${d.index}: ${d.name} (${d.type})`).join('\n')
-			setVulkanInfo(info || '未找到支持 Vulkan 的设备')
+			const found = await invoke<GpuDeviceInfo[]>('get_gpu_devices')
+			setVulkanInfo(found.map((device) => `${device.index}: ${device.description} (${device.type})`))
 		} catch (error) {
-			setVulkanInfo('无法获取 Vulkan 信息')
+			console.error('vulkan query failed:', error)
+			setVulkanInfo([])
 		}
 	}
 
 	return (
-		<div className="space-y-5">
-			<div className="space-y-2">
-				<span className="px-1 text-sm font-semibold text-foreground/95">{m.hardwareAcceleration()}</span>
-				<SectionCard>
-					<div className="space-y-4">
-						<div className="flex items-center justify-between">
-							<span className="flex items-center gap-1 text-sm font-medium">
-								<InfoTooltip text="强制使用 CPU 模式，完全禁用 GPU 加速" />
-								强制 CPU 模式
-							</span>
-							<Switch
-								checked={vm.preference.forceCpu}
-								onCheckedChange={vm.preference.setForceCpu}
-							/>
-						</div>
-
-						<div className="space-y-2">
-							<InfoTooltip text="手动指定 Vulkan 设备索引，用于精细 GPU 选择" />
-							<Input
-								type="number"
-								value={vm.preference.vulkanDevice ?? ''}
-								onChange={(e) => {
-									const val = e.target.value
-									vm.preference.setVulkanDevice(val === '' ? null : parseInt(val, 10))
-								}}
-								placeholder="Vulkan 设备索引（留空为自动）"
-							/>
-						</div>
-
-						<div className="space-y-2">
-							<InfoTooltip text="启用详细 GPU 诊断信息，用于故障排查" />
-							<Input
-								type="text"
-								value={vm.preference.modelQuantization}
-								onChange={(e) => vm.preference.setModelQuantization(e.target.value)}
-								placeholder="模型量化提示（如 Q4_K_M, F16）"
-							/>
-						</div>
-
-						<div className="flex items-center justify-between">
-							<span className="flex items-center gap-1 text-sm font-medium">
-								<InfoTooltip text="启用 GPU 操作的详细诊断日志" />
-								启用诊断
-							</span>
-							<Switch
-								checked={vm.preference.enableDiagnostics}
-								onCheckedChange={vm.preference.setEnableDiagnostics}
-							/>
-						</div>
-
-						<Button
-							variant="secondary"
-							onClick={detectGpu}
-							disabled={detecting}
-							className="w-full">
-							{detecting ? '检测中...' : '检测 GPU 设备'}
+		<AdaptiveSections>
+			<SettingsGroup title={m.gpuDiagnostics()}>
+				<SettingPanel id="detectGpu" className="space-y-3">
+					<div className="flex flex-wrap items-center gap-2">
+						<Cpu className="h-4 w-4 shrink-0 text-muted-foreground" />
+						<span className="text-sm font-medium">{m.detectedDevices()}</span>
+						<StateBadge tone={devices.length > 0 ? 'primary' : 'muted'}>{String(devices.length)}</StateBadge>
+						<Button variant="outline" size="sm" className="ms-auto h-8 gap-1.5" onClick={detect} disabled={detecting}>
+							{detecting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ScanSearch className="h-3.5 w-3.5" />}
+							{detecting ? m.detectingGpu() : m.detectGpu()}
 						</Button>
 					</div>
-				</SectionCard>
-			</div>
+					{devices.length === 0 ? (
+						<EmptyHint>{m.noGpuFound()}</EmptyHint>
+					) : (
+						<ul className="space-y-1">
+							{devices.map((device) => (
+								<li key={device.index} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-2.5 py-1.5">
+									<span className="font-mono text-[11px] text-muted-foreground">#{device.index}</span>
+									<span className="min-w-0 flex-1 truncate text-sm" title={device.description}>
+										{device.description}
+									</span>
+									<StateBadge>{device.type}</StateBadge>
+								</li>
+							))}
+						</ul>
+					)}
+					<p className="text-xs leading-relaxed text-muted-foreground">{m.gpuDiagnosticsInfo()}</p>
+				</SettingPanel>
+			</SettingsGroup>
 
-			<div className="space-y-2">
-				<span className="px-1 text-sm font-semibold text-foreground/95">Vulkan 诊断</span>
-				<SectionCard>
-					<div className="space-y-4">
-						<Button variant="secondary" onClick={checkVulkan} className="w-full">
-							查看 Vulkan 信息
-						</Button>
-						{vulkanInfo && (
-							<pre className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">{vulkanInfo}</pre>
-						)}
-					</div>
-				</SectionCard>
-			</div>
-		</div>
+			<SettingsGroup title={m.vulkanInfoTitle()}>
+				<SettingPanel id="vulkanDevice">
+					<Button variant="outline" size="sm" className="h-8" onClick={showVulkan}>
+						{m.vulkanInfoTitle()}
+					</Button>
+					{vulkanInfo && (
+						<pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-muted/50 p-2.5 font-mono text-[11px] text-muted-foreground">
+							{vulkanInfo.length > 0 ? vulkanInfo.join('\n') : m.vulkanInfoNone()}
+						</pre>
+					)}
+				</SettingPanel>
+			</SettingsGroup>
+		</AdaptiveSections>
 	)
 }
