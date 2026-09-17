@@ -5189,7 +5189,7 @@ dependencies = [
 
 [[package]]
 name = "shiorikotrans"
-version = "1.0.9"
+version = "1.0.10"
 dependencies = [
  "bytemuck",
  "bytes",
