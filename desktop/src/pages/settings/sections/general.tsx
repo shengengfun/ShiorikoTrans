@@ -1,13 +1,7 @@
-import { useEffect, useState } from 'react'
-import { openUrl } from '@tauri-apps/plugin-opener'
-import { AlertTriangle, Check, FileAudio, RotateCcw, Trash2, X } from 'lucide-react'
+import { AlertTriangle, FileAudio, Trash2, X } from 'lucide-react'
 import { m } from '~/paraglide/messages.js'
 import { getLocale } from '~/paraglide/runtime.js'
-import { ReactComponent as DiscordIcon } from '~/icons/discord.svg'
-import { ReactComponent as GithubIcon } from '~/icons/github.svg'
-import { ReactComponent as HeartIcon } from '~/icons/heart.svg'
 import { ReactComponent as LinkIcon } from '~/icons/link.svg'
-import * as config from '~/lib/config'
 import { getLocalizedLanguageName, supportedLanguages } from '~/lib/i18n'
 import { useRecentFiles } from '~/lib/use-recent-files'
 import { usePreferenceProvider } from '~/providers/preference'
@@ -34,7 +28,6 @@ const EXPORT_FORMATS: { value: TextFormat; label: string }[] = [
 export function GeneralSection({ vm, tab, onTranscriptOpened }: { vm: SettingsViewModel; tab: string; onTranscriptOpened?: () => void }) {
 	if (tab === 'recording') return <RecordingTab vm={vm} />
 	if (tab === 'recent') return <RecentTab onTranscriptOpened={onTranscriptOpened} />
-	if (tab === 'about') return <AboutTab vm={vm} />
 	return <BasicTab vm={vm} />
 }
 
@@ -304,66 +297,4 @@ function RecentLanguagesPanel() {
 	)
 }
 
-function AboutTab({ vm }: { vm: SettingsViewModel }) {
-	const preference = vm.preference
-	const [confirmReset, setConfirmReset] = useState(false)
 
-	useEffect(() => {
-		if (!confirmReset) return
-		const timer = window.setTimeout(() => setConfirmReset(false), 4000)
-		return () => window.clearTimeout(timer)
-	}, [confirmReset])
-
-	return (
-		<div className="space-y-5">
-			<SettingsGroup title={m.resetOptions()} description={m.resetOptionsInfo()}>
-				<SettingRow
-					id="resetOptions"
-					hideDescription
-					control={
-						<Button
-							variant={confirmReset ? 'destructive' : 'outline'}
-							size="sm"
-							className="h-8 gap-1.5"
-							onMouseDown={() => {
-								if (!confirmReset) {
-									setConfirmReset(true)
-									return
-								}
-								setConfirmReset(false)
-								preference.resetOptions()
-							}}>
-							<RotateCcw className="h-3.5 w-3.5" />
-							{confirmReset ? m.confirmResetAgain() : m.resetOptions()}
-						</Button>
-					}
-				/>
-			</SettingsGroup>
-
-			<SettingsGroup title={m.general()}>
-				<LinkRow label={m.projectLink()} icon={<LinkIcon className="h-4 w-4 text-muted-foreground" />} onClick={() => openUrl(config.aboutURL)} />
-				<LinkRow label={m.reportIssue()} icon={<GithubIcon className="h-4 w-4 text-muted-foreground" />} onClick={vm.reportIssue} />
-				<LinkRow
-					label={m.supportTheProject()}
-					icon={<HeartIcon className="h-4 w-4 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" />}
-					onClick={() => openUrl(config.supportShiorikoTransURL)}
-				/>
-				<LinkRow label={m.discordCommunity()} icon={<DiscordIcon className="h-4 w-4 text-muted-foreground" />} onClick={() => openUrl(config.discordURL)} />
-			</SettingsGroup>
-
-			<p className="flex flex-wrap items-center gap-2 px-1 text-[11px] text-muted-foreground">
-				<Check className="h-3.5 w-3.5 text-primary" />
-				{m.appTitle()} {vm.appVersion}
-			</p>
-		</div>
-	)
-}
-
-function LinkRow({ label, icon, onClick }: { label: string; icon: React.ReactNode; onClick: () => void }) {
-	return (
-		<button type="button" onClick={onClick} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/40">
-			<span className="text-sm font-medium">{label}</span>
-			{icon}
-		</button>
-	)
-}

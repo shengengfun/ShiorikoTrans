@@ -89,8 +89,7 @@ interface SettingRowProps {
 	children?: ReactNode
 }
 
-function useSettingText(id: SettingId, label?: ReactNode, description?: ReactNode, hideDescription?: boolean) {
-	return useMemo(() => {
+function useSettingText(id: SettingId, label?: ReactNode, description?: ReactNode, hideDescription?: boolean) {	return useMemo(() => {
 		const def = SETTINGS[id] as SettingDef
 		return {
 			label: label ?? def.label(),
@@ -108,7 +107,7 @@ export function SettingRow({ id, label, description, hideDescription, control, v
 	const text = useSettingText(id, label, description, hideDescription)
 
 	return (
-		<div ref={ref} className={cn('transition-colors duration-300', flashing && FLASH_CLASS, className)}>
+		<div ref={ref} className={cn('transition-colors duration-300 hover:bg-accent/25', flashing && FLASH_CLASS, className)}>
 			<div className={cn('gap-4 px-4 py-3', vertical ? 'flex flex-col' : 'flex items-center justify-between')}>
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-1.5">
@@ -136,7 +135,6 @@ export function SettingPanel({ id, children, className }: { id: SettingId; child
 		</div>
 	)
 }
-
 /**
  * Plain search target without row chrome — for rows that render their own
  * label (e.g. the shared `LanguageInput`).

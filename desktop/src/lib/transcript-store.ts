@@ -92,12 +92,27 @@ function prune(entries: Record<string, TranscriptSnapshot>) {
 	return kept
 }
 
+/** Cheap content signature: avoids rewriting the store on every debounce tick. */
+function signatureOf(segments: Segment[] | null | undefined, extra?: Segment[] | null) {
+	const main = segments ?? []
+	const last = main[main.length - 1]
+	return [main.length, extra?.length ?? 0, main.reduce((total, segment) => total + segment.text.length, 0) + (extra?.reduce((total, segment) => total + segment.text.length, 0) ?? 0), last?.stop ?? 0].join(':')
+}
+
 /** Store (or refresh) the transcript belonging to a source file. */
 export async function saveTranscriptSnapshot(snapshot: Omit<TranscriptSnapshot, 'ts'>): Promise<void> {
 	const empty = snapshot.segments.length === 0 && !snapshot.translatedSegments?.length && !snapshot.summary?.length
 	if (empty) return
 	try {
 		const shape = await readStore()
+		const previous = shape.entries[snapshot.path]
+		// Nothing changed since the last flush (e.g. a re-render) — keep the ts.
+		if (previous) {
+			const same =
+				signatureOf(previous.segments, previous.translatedSegments) === signatureOf(snapshot.segments, snapshot.translatedSegments) &&
+				signatureOf(previous.summary) === signatureOf(snapshot.summary)
+			if (same) return
+		}
 		shape.entries[snapshot.path] = { ...snapshot, ts: Date.now() }
 		shape.version = VERSION
 		await writeStore({ version: VERSION, entries: prune(shape.entries) })

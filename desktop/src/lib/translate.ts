@@ -1,3 +1,5 @@
+import { fetch as httpFetch } from '@tauri-apps/plugin-http'
+import { m } from '~/paraglide/messages.js'
 import { Claude, type Llm, type LlmConfig, Ollama, OpenAICompatible } from './llm'
 import type { Segment } from './transcript'
 
@@ -52,8 +54,55 @@ function numberedPrompt(target: string, lines: string): string {
 	return `Translate the following numbered lines into ${target}.\nKeep every line and reply ONLY as:\n<number>| <translation>\n\n${lines}`
 }
 
+/** Endpoint a request would target for the configured channel ('claude' has none). */
+export function translationEndpoint(config: LlmConfig): string | null {
+	if (config.platform === 'ollama') return (config.ollamaBaseUrl || '').replace(/\/+$/, '') || null
+	if (config.platform === 'openai') return (config.openaiBaseUrl || '').replace(/\/+$/, '') || null
+	return null
+}
+
+/**
+ * Is something actually listening on the configured endpoint?
+ *
+ * The built-in local engine expects a llama.cpp / LM Studio style server that the
+ * user runs themselves, so "is the server up" is the difference between a working
+ * translation and a raw `error sending request for url (http://127.0.0.1:8080/...)`.
+ * A 401/404 still proves the server answered, so those count as reachable.
+ */
+export async function probeTranslationEngine(config: LlmConfig, timeoutMs = 2500): Promise<{ ok: boolean; endpoint: string | null }> {
+	const endpoint = translationEndpoint(config)
+	if (!endpoint) return { ok: true, endpoint: null }
+	try {
+		const controller = new AbortController()
+		const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+		try {
+			const response = await httpFetch(`${endpoint}/models`, {
+				signal: controller.signal,
+				headers: config.openaiApiKey ? { Authorization: `Bearer ${config.openaiApiKey}` } : undefined,
+			})
+			return { ok: response.status < 500, endpoint }
+		} finally {
+			window.clearTimeout(timer)
+		}
+	} catch (error) {
+		console.error('translation engine probe failed:', error)
+		return { ok: false, endpoint }
+	}
+}
+
+/** Throws a readable error when the translation channel cannot be reached. */
+async function ensureTranslationEngineReady(config: LlmConfig) {
+	const { ok, endpoint } = await probeTranslationEngine(config)
+	if (ok || !endpoint) return
+	// A hosted service reports its own (more specific) errors; only the
+	// self-hosted case is ambiguous enough to deserve a dedicated message.
+	if (!/127\.0\.0\.1|localhost|\[::1\]/.test(endpoint)) return
+	throw new Error(m.translateEngineUnreachable({ url: endpoint }))
+}
+
 /** Translates a raw text blob (used by the translation page). */
 export async function translateText(text: string, targetCode: string, config: LlmConfig): Promise<string> {
+	await ensureTranslationEngineReady(config)
 	const llm = makeLlm(config)
 	const answer = await llm.ask(
 		`Translate the following text into ${languageName(targetCode)}.\nKeep the structure and line breaks. Output only the translation.\n\n${text}`,
@@ -74,6 +123,7 @@ export async function translateLongText(
 	onProgress?: (done: number, total: number) => void,
 	chunkSize = 25,
 ): Promise<string> {
+	await ensureTranslationEngineReady(config)
 	const llm = makeLlm(config)
 	const target = languageName(targetCode)
 	const source = text.split('\n')
@@ -116,6 +166,7 @@ export async function translateSegments(
 	onChunk?: (done: number, total: number) => void,
 	chunkSize = 25,
 ): Promise<Segment[]> {
+	await ensureTranslationEngineReady(config)
 	const llm = makeLlm(config)
 	const target = languageName(targetCode)
 	const result: Segment[] = segments.map((s) => ({ ...s, text: '' }))

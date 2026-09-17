@@ -1,4 +1,4 @@
-import { Bot, Cpu, Globe, Languages, Mic, Palette, SlidersHorizontal, Sparkles, Terminal, Wrench, type LucideIcon } from 'lucide-react'
+import { Cpu, Globe, Languages, Mic, Palette, SlidersHorizontal, Sparkles, Terminal, Wrench, type LucideIcon } from 'lucide-react'
 import { m } from '~/paraglide/messages.js'
 
 /**
@@ -9,7 +9,7 @@ import { m } from '~/paraglide/messages.js'
  * `components/kit.tsx`). That keeps the settings search index in sync with the
  * UI for free: a row can never show a label that the search cannot find.
  */
-export type SectionId = 'general' | 'appearance' | 'transcription' | 'models' | 'translation' | 'summarize' | 'dictation' | 'gpu' | 'api' | 'advanced'
+export type SectionId = 'general' | 'appearance' | 'transcription' | 'translation' | 'summarize' | 'dictation' | 'gpu' | 'api' | 'advanced'
 
 export interface SettingDef {
 	id: string
@@ -32,7 +32,6 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'basic',
 		label: () => m.language(),
-		description: () => m.displayLanguageInfo(),
 		keywords: 'language 语言 locale 界面语言',
 	},
 	textDirection: {
@@ -40,7 +39,6 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'basic',
 		label: () => m.textDirection(),
-		description: () => m.textDirectionInfo(),
 		keywords: 'direction rtl ltr 文本方向 从右到左',
 	},
 	subtitlePreset: {
@@ -48,7 +46,6 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'basic',
 		label: () => m.presetForSubtitles(),
-		description: () => m.subtitlePresetInfo(),
 		keywords: 'subtitle srt 字幕 预设',
 	},
 	exportFormat: {
@@ -56,7 +53,6 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'basic',
 		label: () => m.exportFormat(),
-		description: () => m.exportFormatInfo(),
 		keywords: 'export format 导出 格式 txt srt vtt json csv docx pdf md',
 	},
 	soundOnFinish: {
@@ -85,7 +81,6 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'basic',
 		label: () => m.checkYtdlpUpdates(),
-		description: () => m.ytdlpOptionsInfo(),
 		keywords: 'ytdlp youtube update 更新 检查',
 	},
 	storeRecordInDocuments: {
@@ -93,7 +88,6 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'recording',
 		label: () => m.saveRecordInDocumentsFolder(),
-		description: () => m.storeRecordInDocumentsInfo(),
 		keywords: 'recording save documents 录音 保存 文档',
 	},
 	recordingPath: {
@@ -119,7 +113,6 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'recent',
 		label: () => m.recentLanguages(),
-		description: () => m.recentLanguagesInfo(),
 		keywords: 'recent language 最近 语言',
 	},
 
@@ -129,8 +122,14 @@ export const SETTINGS = {
 		section: 'general',
 		tab: 'about',
 		label: () => m.resetOptions(),
-		description: () => m.resetOptionsInfo(),
 		keywords: 'reset restore default 重置 恢复 默认',
+	},
+	aboutApp: {
+		id: 'aboutApp',
+		section: 'general',
+		tab: 'about',
+		label: () => m.appTitle(),
+		keywords: 'about version system 关于 版本 系统信息 commit',
 	},
 
 	// ── Appearance ─────────────────────────────────────────────────────────
@@ -138,28 +137,24 @@ export const SETTINGS = {
 		id: 'themeMode',
 		section: 'appearance',
 		label: () => m.theme(),
-		description: () => m.themeModeInfo(),
 		keywords: 'theme dark light system 主题 深色 浅色 跟随系统 外观',
 	},
 	themePalette: {
 		id: 'themePalette',
 		section: 'appearance',
 		label: () => m.themePalette(),
-		description: () => m.themePaletteInfo(),
 		keywords: 'palette color 调色板 配色 表面',
 	},
 	accentColor: {
 		id: 'accentColor',
 		section: 'appearance',
 		label: () => m.accentColor(),
-		description: () => m.accentColorInfo(),
 		keywords: 'accent color 强调色 主题色 颜色',
 	},
 	customBackground: {
 		id: 'customBackground',
 		section: 'appearance',
 		label: () => m.customBackground(),
-		description: () => m.customBackgroundInfo(),
 		keywords: 'background image 背景 壁纸 图片',
 	},
 
@@ -169,7 +164,6 @@ export const SETTINGS = {
 		section: 'transcription',
 		tab: 'basic',
 		label: () => m.language(),
-		description: () => m.inputLanguageInfo(),
 		keywords: 'language input 语言 识别',
 	},
 
@@ -213,7 +207,6 @@ export const SETTINGS = {
 		section: 'transcription',
 		tab: 'runtime',
 		label: () => m.includeSubFolders(),
-		description: () => m.includeSubFoldersInfo(),
 		keywords: 'folder recursive 子文件夹 递归 包含',
 	},
 	skipIfExists: {
@@ -221,7 +214,6 @@ export const SETTINGS = {
 		section: 'transcription',
 		tab: 'runtime',
 		label: () => m.skipIfTranscriptExists(),
-		description: () => m.skipIfExistsInfo(),
 		keywords: 'skip overwrite 跳过 已存在',
 	},
 	saveNextToAudioFile: {
@@ -229,14 +221,13 @@ export const SETTINGS = {
 		section: 'transcription',
 		tab: 'runtime',
 		label: () => m.placeTranscriptNextToFiles(),
-		description: () => m.saveNextToAudioFileInfo(),
 		keywords: 'save output beside 输出 同目录',
 	},
 
 	// ── Models ─────────────────────────────────────────────────────────────
 	modelCatalog: {
 		id: 'modelCatalog',
-		section: 'models',
+		section: 'transcription',
 		tab: 'catalog',
 		label: () => m.modelCatalog(),
 		description: () => m.modelCatalogInfo(),
@@ -244,46 +235,50 @@ export const SETTINGS = {
 	},
 	downloadModel: {
 		id: 'downloadModel',
-		section: 'models',
+		section: 'transcription',
 		tab: 'catalog',
 		label: () => m.downloadModel(),
-		description: () => m.pasteModelLink(),
 		keywords: 'download url huggingface 下载 链接',
+	},
+	hfMirror: {
+		id: 'hfMirror',
+		section: 'transcription',
+		tab: 'catalog',
+		label: () => m.hfMirror(),
+		description: () => m.hfMirrorInfo(),
+		keywords: 'huggingface mirror hf-mirror 镜像 下载慢 国内',
 	},
 	selectedModel: {
 		id: 'selectedModel',
-		section: 'models',
+		section: 'transcription',
 		tab: 'installed',
 		label: () => m.selectModel(),
-		description: () => m.selectedModelInfo(),
 		keywords: 'model select current 模型 选择 当前',
 	},
 	modelSettings: {
 		id: 'modelSettings',
-		section: 'models',
+		section: 'transcription',
 		tab: 'installed',
 		label: () => m.modelSettings(),
-		description: () => m.modelSettingsInfo(),
 		keywords: 'model options engine 模型 设置 参数 引擎',
 	},
 	modelsFolder: {
 		id: 'modelsFolder',
-		section: 'models',
+		section: 'transcription',
 		tab: 'storage',
 		label: () => m.modelsFolder(),
-		description: () => m.modelsFolderInfo(),
 		keywords: 'models folder 模型 目录 位置 存储',
 	},
 	changeModelsFolder: {
 		id: 'changeModelsFolder',
-		section: 'models',
+		section: 'transcription',
 		tab: 'storage',
 		label: () => m.changeModelsFolder(),
 		keywords: 'move models folder 更改 模型 目录',
 	},
 	downloadModelsLink: {
 		id: 'downloadModelsLink',
-		section: 'models',
+		section: 'transcription',
 		tab: 'storage',
 		label: () => m.downloadModelsLink(),
 		keywords: 'browse models 下载 模型 网站',
@@ -295,7 +290,6 @@ export const SETTINGS = {
 		section: 'translation',
 		tab: 'engine',
 		label: () => m.enableTranslation(),
-		description: () => m.enableTranslationInfo(),
 		keywords: 'translation enable 翻译 启用',
 	},
 	translationEngine: {
@@ -303,7 +297,6 @@ export const SETTINGS = {
 		section: 'translation',
 		tab: 'engine',
 		label: () => m.translationEngine(),
-		description: () => m.engineLocalInfo(),
 		keywords: 'engine ollama claude openai 翻译 引擎 本地',
 	},
 	enginePreset: {
@@ -346,7 +339,6 @@ export const SETTINGS = {
 		section: 'translation',
 		tab: 'models',
 		label: () => m.translateModels(),
-		description: () => m.translateModelsInfo(),
 		keywords: 'translation model gguf 翻译 模型 下载',
 	},
 	translateDefaults: {
@@ -383,7 +375,6 @@ export const SETTINGS = {
 		id: 'summarizeEnabled',
 		section: 'summarize',
 		label: () => m.processWithLlm(),
-		description: () => m.infoLlmSummarize(),
 		keywords: 'summarize llm ai 摘要 总结 模型',
 	},
 	llmPlatform: {
@@ -396,7 +387,6 @@ export const SETTINGS = {
 		id: 'llmApiKey',
 		section: 'summarize',
 		label: () => m.llmApiKey(),
-		description: () => m.infoLlmApiKey(),
 		keywords: 'api key 密钥',
 	},
 	llmBaseUrl: {
@@ -415,14 +405,12 @@ export const SETTINGS = {
 		id: 'llmPrompt',
 		section: 'summarize',
 		label: () => m.llmPrompt(),
-		description: () => m.infoLlmPrompt(),
 		keywords: 'prompt 提示词 模板',
 	},
 	llmMaxTokens: {
 		id: 'llmMaxTokens',
 		section: 'summarize',
 		label: () => m.maxTokens(),
-		description: () => m.infoMaxTokens(),
 		keywords: 'max tokens 最大 token',
 	},
 	runLlmCheck: {
@@ -437,14 +425,12 @@ export const SETTINGS = {
 		id: 'hotkeyEnabled',
 		section: 'dictation',
 		label: () => m.globalHotkeyEnabled(),
-		description: () => m.globalDictationPromo(),
 		keywords: 'dictation hotkey 听写 快捷键 全局',
 	},
 	dictationIndicator: {
 		id: 'dictationIndicator',
 		section: 'dictation',
 		label: () => m.dictationIndicatorSetting(),
-		description: () => m.dictationIndicatorSettingInfo(),
 		keywords: 'indicator overlay 指示器 悬浮',
 	},
 	hotkeyActivationMode: {
@@ -469,7 +455,6 @@ export const SETTINGS = {
 		id: 'hotkeyNormalizeOutput',
 		section: 'dictation',
 		label: () => m.normalizeHotkeyOutput(),
-		description: () => m.normalizeHotkeyOutputInfo(),
 		keywords: 'normalize punctuation 规范化 标点 大小写',
 	},
 
@@ -479,7 +464,6 @@ export const SETTINGS = {
 		section: 'gpu',
 		tab: 'acceleration',
 		label: () => m.gpuDevice(),
-		description: () => m.infoGpuDevice(),
 		keywords: 'gpu device 显卡 设备 加速',
 	},
 	forceCpu: {
@@ -495,7 +479,6 @@ export const SETTINGS = {
 		section: 'gpu',
 		tab: 'acceleration',
 		label: () => m.vulkanDevice(),
-		description: () => m.vulkanDeviceInfo(),
 		keywords: 'vulkan index 设备 索引',
 	},
 	modelQuantization: {
@@ -503,7 +486,6 @@ export const SETTINGS = {
 		section: 'gpu',
 		tab: 'acceleration',
 		label: () => m.modelQuantizationHint(),
-		description: () => m.modelQuantizationHintInfo(),
 		keywords: 'quantization hint 量化 提示',
 	},
 	enableDiagnostics: {
@@ -511,7 +493,6 @@ export const SETTINGS = {
 		section: 'gpu',
 		tab: 'acceleration',
 		label: () => m.enableDiagnostics(),
-		description: () => m.enableDiagnosticsInfo(),
 		keywords: 'diagnostics verbose 诊断 详细 日志',
 	},
 	detectGpu: {
@@ -519,7 +500,6 @@ export const SETTINGS = {
 		section: 'gpu',
 		tab: 'diagnostics',
 		label: () => m.detectGpu(),
-		description: () => m.gpuDiagnosticsInfo(),
 		keywords: 'detect scan 检测 扫描 诊断',
 	},
 	// ── Advanced ───────────────────────────────────────────────────────────
@@ -536,7 +516,6 @@ export const SETTINGS = {
 		section: 'advanced',
 		tab: 'logs',
 		label: () => m.logsAndDiagnostics(),
-		description: () => m.infoLogsAndDiagnostics(),
 		keywords: 'log diagnostics 日志 诊断 排查',
 	},
 	resetApp: {
@@ -579,7 +558,6 @@ export interface TabSpec {
 export interface SectionSpec {
 	id: SectionId
 	label: () => string
-	description: () => string
 	icon: LucideIcon
 	/** Empty = the section renders a single scrolling page. */
 	tabs: TabSpec[]
@@ -600,7 +578,6 @@ export const SECTION_GROUPS: SectionGroup[] = [
 			{
 				id: 'general',
 				label: () => m.general(),
-				description: () => m.sectionGeneralDesc(),
 				icon: Globe,
 				tabs: [TAB_BASIC, TAB_RECORDING, { id: 'recent', label: () => m.tabRecent() }, { id: 'about', label: () => m.tabAbout() }],
 			},
@@ -610,18 +587,15 @@ export const SECTION_GROUPS: SectionGroup[] = [
 		label: () => m.transcription(),
 		sections: [
 			{
+				// Models live inside the transcription section: they are part of the
+				// transcription pipeline, not a separate area of the app.
 				id: 'transcription',
 				label: () => m.transcription(),
-				description: () => m.sectionTranscriptionDesc(),
 				icon: SlidersHorizontal,
-				tabs: [TAB_BASIC, { id: 'speakers', label: () => m.speakerTiming() }, { id: 'runtime', label: () => m.runtimeDependencies() }],
-			},
-			{
-				id: 'models',
-				label: () => m.selectModel(),
-				description: () => m.sectionModelsDesc(),
-				icon: Bot,
 				tabs: [
+					TAB_BASIC,
+					{ id: 'speakers', label: () => m.speakerTiming() },
+					{ id: 'runtime', label: () => m.runtimeDependencies() },
 					{ id: 'catalog', label: () => m.modelCatalog() },
 					{ id: 'installed', label: () => m.installed() },
 					{ id: 'storage', label: () => m.modelsFolder() },
@@ -630,7 +604,6 @@ export const SECTION_GROUPS: SectionGroup[] = [
 			{
 				id: 'translation',
 				label: () => m.translation(),
-				description: () => m.sectionTranslationDesc(),
 				icon: Languages,
 				tabs: [
 					{ id: 'engine', label: () => m.translationEngine() },
@@ -646,21 +619,18 @@ export const SECTION_GROUPS: SectionGroup[] = [
 			{
 				id: 'appearance',
 				label: () => m.appearance(),
-				description: () => m.sectionAppearanceDesc(),
 				icon: Palette,
 				tabs: [],
 			},
 			{
 				id: 'dictation',
 				label: () => m.globalDictation(),
-				description: () => m.sectionDictationDesc(),
 				icon: Mic,
 				tabs: [],
 			},
 			{
 				id: 'summarize',
 				label: () => m.processWithLlm(),
-				description: () => m.sectionSummarizeDesc(),
 				icon: Sparkles,
 				tabs: [],
 			},
@@ -672,7 +642,6 @@ export const SECTION_GROUPS: SectionGroup[] = [
 			{
 				id: 'gpu',
 				label: () => m.hardwareAcceleration(),
-				description: () => m.sectionGpuDesc(),
 				icon: Cpu,
 				tabs: [
 					{ id: 'acceleration', label: () => m.tabAcceleration() },
@@ -682,14 +651,12 @@ export const SECTION_GROUPS: SectionGroup[] = [
 			{
 				id: 'api',
 				label: () => m.apiAndAgents(),
-				description: () => m.sectionApiDesc(),
 				icon: Terminal,
 				tabs: [],
 			},
 			{
 				id: 'advanced',
 				label: () => m.advanced(),
-				description: () => m.sectionAdvancedDesc(),
 				icon: Wrench,
 				tabs: [
 					{ id: 'behaviour', label: () => m.tabBehaviour() },

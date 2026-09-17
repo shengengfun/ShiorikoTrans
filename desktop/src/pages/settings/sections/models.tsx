@@ -11,6 +11,7 @@ import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
 import { Progress } from '~/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
+import { Switch } from '~/components/ui/switch'
 import { getFriendlyModelName, isCatalogModelInstalled } from '~/lib/model'
 import { useModelDownload } from '~/lib/model-download'
 import { CATALOG_GROUPS, type CatalogGroup, type CatalogModel } from '~/lib/model-catalog'
@@ -181,6 +182,15 @@ function CatalogTab({ vm }: { vm: SettingsViewModel }) {
 			</SettingsGroup>
 
 			<SettingsGroup title={m.downloadModel()}>
+				<SettingRow
+					id="hfMirror"
+					control={
+						<Switch
+							checked={vm.preference.hfMirrorEnabled}
+							onCheckedChange={vm.preference.setHfMirrorEnabled}
+						/>
+					}
+				/>
 				<SettingRow
 					id="downloadModel"
 					vertical

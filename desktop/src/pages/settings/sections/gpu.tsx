@@ -156,7 +156,6 @@ function DiagnosticsTab({ vm }: { vm: SettingsViewModel }) {
 							))}
 						</ul>
 					)}
-					<p className="text-xs leading-relaxed text-muted-foreground">{m.gpuDiagnosticsInfo()}</p>
 				</SettingPanel>
 			</SettingsGroup>
 

@@ -26,7 +26,7 @@ import { useTranscriptionProvider } from '~/providers/transcription'
  */
 export function useRecentFiles() {
 	const preference = usePreferenceProvider()
-	const { openFiles, setFiles } = useFilesContext()
+	const { setFiles } = useFilesContext()
 	const { restoreTranscript, loading } = useTranscriptionProvider()
 	const navigate = useNavigate()
 	const location = useLocation()
@@ -126,9 +126,8 @@ export function useRecentFiles() {
 					await refreshTranscripts()
 				}
 				if (exists) {
-					// `openFiles` survives the destination page's own "reset on
-					// navigation" effect, so no timeout hacks are needed here.
-					openFiles([{ name: file.name, path: file.path }])
+					// Re-select the source so the user can re-run or export it.
+					setFiles([{ name: file.name, path: file.path }])
 				} else {
 					// Transcript without its source: show the text but keep the picker
 					// empty so a re-run cannot target a file that no longer exists.
@@ -141,7 +140,7 @@ export function useRecentFiles() {
 				setBusy(false)
 			}
 		},
-		[loading, location.pathname, navigate, openFiles, preference, refreshTranscripts, remove, restoreTranscript, setFiles],
+		[loading, location.pathname, navigate, preference, refreshTranscripts, remove, restoreTranscript, setFiles],
 	)
 
 	return { recent, missing, transcripts, busy, open, remove, clear, prune, reveal }

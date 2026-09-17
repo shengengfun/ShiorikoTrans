@@ -89,12 +89,22 @@ export async function isCatalogModelInstalled(entry: CatalogModel): Promise<bool
  * `models/transcribe` (or its own sub-folder) and returns the model path to
  * load (`null` when the user cancelled the download).
  */
-export async function installCatalogModel(entry: CatalogModel, onProgress?: (done: number, total: number) => void): Promise<string | null> {
+/**
+ * HuggingFace is the single source for every curated model, and it is slow or
+ * unreachable from some networks. `hf-mirror.com` serves the same files, so the
+ * download URL can be rewritten when the user enables the mirror.
+ */
+export function resolveModelUrl(url: string, mirror: boolean): string {
+	if (!mirror) return url
+	return url.replace(/^https:\/\/huggingface\.co\//, 'https://hf-mirror.com/')
+}
+
+export async function installCatalogModel(entry: CatalogModel, onProgress?: (done: number, total: number) => void, mirror = false): Promise<string | null> {
 	let primary: string | null = null
 	for (const [index, file] of entry.files.entries()) {
 		const target = await catalogFilePath(entry, file.filename)
 		if (!(await fsExt.exists(target))) {
-			const result = await invoke<DownloadModelResult>('download_model', { url: file.url, path: target })
+			const result = await invoke<DownloadModelResult>('download_model', { url: resolveModelUrl(file.url, mirror), path: target })
 			if (result.status !== 'completed') return null
 		}
 		primary ??= target

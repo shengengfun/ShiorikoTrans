@@ -7,6 +7,8 @@ import { cn } from '~/lib/style'
 import { findSection, SECTION_GROUPS, type SectionId, type SettingDef } from '../registry'
 
 interface SettingsSidebarProps {
+	/** Width in px; the divider next to it is draggable. */
+	width: number
 	activeSection: SectionId
 	onSelectSection: (id: SectionId) => void
 	query: string
@@ -24,6 +26,7 @@ interface SettingsSidebarProps {
  * straight to the setting — including into the right sub-tab.
  */
 export function SettingsSidebar({
+	width,
 	activeSection,
 	onSelectSection,
 	query,
@@ -60,7 +63,7 @@ export function SettingsSidebar({
 	}
 
 	return (
-		<aside className="flex w-60 shrink-0 flex-col border-e border-border/55 bg-muted/25">
+		<aside style={{ width }} className="flex shrink-0 flex-col border-e border-border/55 bg-muted/25">
 			<div className="flex items-center justify-between gap-2 px-3 pt-3 pb-2">
 				<span className="text-sm font-semibold">{m.settings()}</span>
 				<Button variant="ghost" size="iconSm" className="h-7 w-7 rounded-lg" onClick={onClose} aria-label={m.modalClose()}>

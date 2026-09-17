@@ -480,5 +480,17 @@
 	"recentSourceMissingHint": "源文件已不存在（转录内容已保存）",
 	"recentSourceMissingRestored": "源文件已不存在，已为你恢复保存的转录内容",
 	"recentTranscriptSegments": "{count} 段",
-	"recentBusyTranscribing": "正在转写中，请等当前任务结束后再打开历史记录"
+	"recentBusyTranscribing": "正在转写中，请等当前任务结束后再打开历史记录",
+	"copyDiagnostics": "复制诊断信息",
+	"credits": "致谢：小丸 · shengengfun · DeepSeek · GitHub Copilot",
+	"hfMirror": "使用 HuggingFace 镜像",
+	"hfMirrorInfo": "官方站点慢或被墙时，把下载地址换成 hf-mirror.com。",
+	"maintenance": "维护",
+	"openReleases": "检查更新",
+	"openReleasesInfo": "在浏览器打开发布页",
+	"translateEngineChecking": "检测中…",
+	"translateEngineOffline": "服务未启动",
+	"translateEngineOnline": "服务在线",
+	"translateEngineSetup": "启动本地服务",
+	"translateEngineUnreachable": "翻译服务未启动：{url} 没有响应。请先启动本地服务（可用下方命令）或切换引擎。"
 }

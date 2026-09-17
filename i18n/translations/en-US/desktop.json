@@ -579,5 +579,17 @@
 	"recentSourceMissingHint": "source file gone — transcript kept",
 	"recentSourceMissingRestored": "The source file is gone, so the saved transcript was restored",
 	"recentTranscriptSegments": "{count} segments",
-	"recentBusyTranscribing": "A transcription is running — open history again once it finishes"
+	"recentBusyTranscribing": "A transcription is running — open history again once it finishes",
+	"copyDiagnostics": "Copy diagnostics",
+	"credits": "Thanks to 小丸, shengengfun, DeepSeek and GitHub Copilot",
+	"hfMirror": "Use HuggingFace mirror",
+	"hfMirrorInfo": "Rewrite huggingface.co downloads to hf-mirror.com when the official site is slow or blocked.",
+	"maintenance": "Maintenance",
+	"openReleases": "Check for updates",
+	"openReleasesInfo": "Opens the GitHub releases page",
+	"translateEngineChecking": "checking…",
+	"translateEngineOffline": "server offline",
+	"translateEngineOnline": "server online",
+	"translateEngineSetup": "Start the local server",
+	"translateEngineUnreachable": "No translation server is listening on {url}. Start a local server (command below) or switch the engine."
 }

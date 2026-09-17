@@ -13,17 +13,28 @@ export default function StatusBar() {
 		let cancelled = false
 		let timer: number | undefined
 		async function poll() {
-			try {
-				const value = await invoke<[number, number]>('get_system_stats')
-				if (!cancelled) setStats(value)
-			} catch {
-				/* ignore in non-Tauri contexts */
+			// Reading the cached sampler is cheap, but there is no reason to wake the
+			// webview every 1.2s while the window is hidden (tray / minimised).
+			if (!document.hidden) {
+				try {
+					const value = await invoke<[number, number]>('get_system_stats')
+					if (!cancelled) setStats(value)
+				} catch {
+					/* ignore in non-Tauri contexts */
+				}
 			}
 			if (!cancelled) timer = window.setTimeout(poll, 1200)
 		}
 		poll()
+		// Refresh immediately when the window becomes visible again, so the numbers
+		// are not stale for up to a second.
+		const onVisibility = () => {
+			if (!document.hidden) void poll()
+		}
+		document.addEventListener('visibilitychange', onVisibility)
 		return () => {
 			cancelled = true
+			document.removeEventListener('visibilitychange', onVisibility)
 			if (timer) window.clearTimeout(timer)
 		}
 	}, [])

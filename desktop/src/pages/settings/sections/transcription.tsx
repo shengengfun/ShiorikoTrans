@@ -11,15 +11,17 @@ import { useModelDownload } from '~/lib/model-download'
 import { cn } from '~/lib/style'
 import { usePreferenceProvider } from '~/providers/preference'
 import { AdaptiveSections, SettingBlock, SettingRow, SettingsGroup, StateBadge } from '../components/kit'
+import { ModelsSection } from './models'
+import type { SettingsViewModel } from './shared'
 
 /**
  * Transcription pipeline settings.
  *
- * The speaker options live here (and not only inside the per-model dialog) so
- * they stay discoverable: diarization, the `[Speaker n]` prefixes used in
- * transcripts/exports, and stable timestamps.
+ * The model tabs live here as well: models belong to the pipeline, so they are
+ * sub-tabs of this section instead of a separate navigation entry.
  */
-export function TranscriptionSection({ tab }: { tab: string }) {
+export function TranscriptionSection({ vm, tab }: { vm: SettingsViewModel; tab: string }) {
+	if (tab === 'catalog' || tab === 'installed' || tab === 'storage') return <ModelsSection vm={vm} tab={tab} />
 	if (tab === 'speakers') return <SpeakersTab />
 	if (tab === 'runtime') return <RuntimeTab />
 	return <BasicTab />
@@ -27,7 +29,7 @@ export function TranscriptionSection({ tab }: { tab: string }) {
 
 function BasicTab() {
 	return (
-		<SettingsGroup title={m.language()} description={m.inputLanguageInfo()}>
+		<SettingsGroup title={m.language()}>
 			<SettingBlock id="inputLanguage">
 				<LanguageInput />
 			</SettingBlock>
@@ -41,7 +43,7 @@ function SpeakersTab() {
 
 	return (
 		<div className="space-y-5">
-			<SettingsGroup title={m.speakerTiming()} description={m.speakerOptionsHint()}>
+			<SettingsGroup title={m.speakerTiming()}>
 				<SettingRow
 					id="diarization"
 					control={<Switch checked={preference.diarizeEnabled} onCheckedChange={toggleDiarization} />}
@@ -66,7 +68,7 @@ function RuntimeTab() {
 		<AdaptiveSections>
 			<FfmpegPanel />
 
-			<SettingsGroup title={m.batchDefaults()} description={m.batchDefaultsInfo()}>
+			<SettingsGroup title={m.batchDefaults()} >
 				<SettingRow
 					id="includeSubFolders"
 					control={
@@ -135,7 +137,7 @@ function FfmpegPanel() {
 	const sourceLabel = status?.source === 'bundled' ? m.ffmpegBundled() : status?.source === 'system' ? m.ffmpegSystem() : m.ffmpegDownloaded()
 
 	return (
-		<SettingsGroup title={m.runtimeDependencies()} description={m.runtimeDependenciesInfo()}>
+		<SettingsGroup title={m.runtimeDependencies()}>
 			<SettingRow
 				id="ffmpeg"
 				hideDescription

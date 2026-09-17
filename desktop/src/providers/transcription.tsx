@@ -38,6 +38,8 @@ export interface TranscriptionProviderValue {
 	activeFile: { name: string; path: string } | null
 	/** Name the session file when restoring a saved transcript. */
 	setActiveFile: Dispatch<SetStateAction<{ name: string; path: string } | null>>
+	/** Increments once per finished transcription run. */
+	runId: number
 
 	// Summary
 	summarizeSegments: transcript.Segment[] | null
@@ -78,7 +80,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const preference = usePreferenceProvider()
-	const { openFiles } = useFilesContext()
+	const { setFiles } = useFilesContext()
 
 	const { segments: summarizeSegments, setSegments: setSummarizeSegments, summarizing, transcriptTab, setTranscriptTab, summarize } = useSummarization()
 
@@ -97,6 +99,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 		onForceAbort,
 		activeFile,
 		setActiveFile,
+		runId,
 	} = useTranscription({
 			onResetSummary: () => {
 				setSummarizeSegments(null)
@@ -198,9 +201,8 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 				recordFinishHook.current?.()
 				current.preference.setHomeTab('file')
 				current.recording.setIsRecording(false)
-				// `openFiles` marks the selection as explicit, so the transcription
-				// page keeps it while we navigate there.
-				openFiles([{ name, path }])
+				// The selection is kept across navigation now, so a plain update is enough.
+				setFiles([{ name, path }])
 				if (current.location.pathname !== '/') navigate('/')
 				void latest.current.transcribe(path)
 			}),
@@ -209,7 +211,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 			if (flushTimer != null) window.clearTimeout(flushTimer)
 			unlisteners.forEach((promise) => promise.then((unlisten) => unlisten()))
 		}
-	}, [navigate, openFiles, setProgress, setSegments])
+	}, [navigate, setFiles, setProgress, setSegments])
 
 	return (
 		<TranscriptionContext.Provider
@@ -228,6 +230,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 				onForceAbort,
 				activeFile,
 				setActiveFile,
+				runId,
 				summarizeSegments,
 				setSummarizeSegments,
 				summarizing,

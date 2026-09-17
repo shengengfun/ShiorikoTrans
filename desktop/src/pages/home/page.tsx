@@ -39,7 +39,7 @@ export default function Home() {
 	const [translateTarget, setTranslateTarget] = useState('zh')
 	const [translating, setTranslating] = useState(false)
 	const [autoOpenTranslate, setAutoOpenTranslate] = useLocalStorage('prefs_send_to_translate', false)
-	const sentToTranslateRef = useRef(false)
+	const sentRunRef = useRef<number | null>(null)
 	const firstFile = vm.files[0]
 
 	async function showWindow() {
@@ -54,15 +54,17 @@ export default function Home() {
 
 	// 勾选后：转写完成即把当前转录文本带到“翻译”页
 	useEffect(() => {
-		if (vm.loading) {
-			sentToTranslateRef.current = false
-			return
-		}
-		if (!autoOpenTranslate || sentToTranslateRef.current || !vm.segments?.length || !firstFile) return
-		sentToTranslateRef.current = true
+		if (vm.loading) return
+		// The first run we ever observe belongs to an earlier mount (the user may
+		// have just been redirected back here), so it must not trigger a redirect.
+		// Only a run that finished *now* sends us to the translation page.
+		const isNewRun = sentRunRef.current !== null && sentRunRef.current !== vm.runId
+		sentRunRef.current = vm.runId
+		if (!isNewRun) return
+		if (!autoOpenTranslate || !vm.segments?.length || !firstFile) return
 		const sourceText = vm.segments.map((segment) => segment.text).join('\n')
 		navigate('/translate', { state: { sourceText, fileName: firstFile.name } })
-	}, [vm.loading, autoOpenTranslate, vm.segments, firstFile, navigate])
+	}, [vm.loading, vm.runId, autoOpenTranslate, vm.segments, firstFile, navigate])
 
 	async function translateCurrent() {
 		if (!vm.segments || translating) return

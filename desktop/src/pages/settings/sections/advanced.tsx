@@ -97,7 +97,7 @@ function LogsTab({ vm }: { vm: SettingsViewModel }) {
 
 	return (
 		<AdaptiveSections>
-			<SettingsGroup title={m.logsAndDiagnostics()} description={m.infoLogsAndDiagnostics()}>
+			<SettingsGroup title={m.logsAndDiagnostics()}>
 				<SettingPanel id="logsAndDiagnostics" className="space-y-3">
 					<div className="flex flex-wrap items-center gap-2">
 						<Button variant="secondary" size="sm" className="h-8 gap-1.5" onClick={viewLogs}>

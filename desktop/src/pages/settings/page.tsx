@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getLocale } from '~/paraglide/runtime.js'
+import { m } from '~/paraglide/messages.js'
 import { ModifyState } from '~/lib/types'
 import { cn } from '~/lib/style'
 import { viewModel } from './view-model'
 import { SettingsUiProvider } from './components/kit'
 import { SettingsSidebar } from './components/sidebar'
 import { defaultTab, findSection, matchSettings, SECTIONS, type SectionId, type SettingDef } from './registry'
+import { AboutSection } from './sections/about'
 import { AdvancedSection } from './sections/advanced'
 import { ApiSection } from './sections/api'
 import { AppearanceSection } from './sections/appearance'
 import { DictationSection } from './sections/dictation'
 import { GeneralSection } from './sections/general'
 import { GpuSection } from './sections/gpu'
-import { ModelsSection } from './sections/models'
 import { SummarizeSection } from './sections/summarize'
 import { TranscriptionSection } from './sections/transcription'
 import { TranslationSection } from './sections/translation'
@@ -34,6 +35,9 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 	)
 	const [tabBySection, setTabBySection] = useState<Record<string, string>>({})
 	const [flashId, setFlashId] = useState<string | null>(null)
+	// Dragging the divider is a session-level preference: wide enough for long
+	// labels, narrow enough to give the content room (RinaDown's sidebar handle).
+	const [sidebarWidth, setSidebarWidth] = useState(240)
 	const nodes = useRef(new Map<string, HTMLElement>())
 	const searchRef = useRef<HTMLInputElement>(null)
 	const scrollRef = useRef<HTMLDivElement>(null)
@@ -76,6 +80,21 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 		if (scrollRef.current) scrollRef.current.scrollTop = 0
 	}
 
+	function startResize(event: React.PointerEvent<HTMLDivElement>) {
+		event.preventDefault()
+		const startX = event.clientX
+		const startWidth = sidebarWidth
+		const onMove = (moveEvent: PointerEvent) => {
+			setSidebarWidth(Math.min(340, Math.max(200, startWidth + moveEvent.clientX - startX)))
+		}
+		const onUp = () => {
+			window.removeEventListener('pointermove', onMove)
+			window.removeEventListener('pointerup', onUp)
+		}
+		window.addEventListener('pointermove', onMove)
+		window.addEventListener('pointerup', onUp)
+	}
+
 	function selectTab(id: string) {
 		setTabBySection((previous) => ({ ...previous, [activeSection]: id }))
 		if (scrollRef.current) scrollRef.current.scrollTop = 0
@@ -109,6 +128,7 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 				onMouseDown={(event) => event.stopPropagation()}
 				className="flex h-[min(92vh,860px)] w-full max-w-[1200px] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-2xl">
 				<SettingsSidebar
+					width={sidebarWidth}
 					activeSection={activeSection}
 					onSelectSection={selectSection}
 					query={query}
@@ -120,16 +140,22 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 					searchRef={searchRef}
 				/>
 
+				{/* Hairline divider with a wider invisible hit area. */}
+				<div
+					role="separator"
+					aria-orientation="vertical"
+					aria-label={m.settings()}
+					onPointerDown={startResize}
+					className="relative z-10 -mx-1 w-2 shrink-0 cursor-col-resize bg-transparent"
+				/>
+
 				<div className="flex min-w-0 flex-1 flex-col">
 					<header className="shrink-0 border-b border-border/55 px-6 pt-4">
 						<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 							<h2 className="text-lg font-semibold">{section.label()}</h2>
-							<p className="min-w-0 flex-1 truncate text-xs text-muted-foreground" title={section.description()}>
-								{section.description()}
-							</p>
 						</div>
 						{tabs.length > 0 && (
-							<div className="mt-2 flex flex-wrap items-center gap-5">
+							<div className="mt-2 flex flex-nowrap items-center gap-5 overflow-x-auto">
 								{tabs.map((tab) => {
 									const active = tab.id === activeTab
 									return (
@@ -138,7 +164,7 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 											type="button"
 											onClick={() => selectTab(tab.id)}
 											className={cn(
-												'-mb-px border-b-2 px-0.5 pt-1 pb-2 text-[13px] transition-colors',
+											'shrink-0 border-b-2 px-0.5 pt-1 pb-2 text-[13px] transition-colors',
 												active
 													? 'border-primary font-medium text-foreground'
 													: 'border-transparent text-muted-foreground hover:text-foreground',
@@ -153,10 +179,10 @@ export default function SettingsPage({ setVisible, scrollTo }: SettingsPageProps
 
 					<div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
 						<SettingsUiProvider value={{ registerNode, flashId }}>
-							{activeSection === 'general' && <GeneralSection vm={vm} tab={activeTab} onTranscriptOpened={() => setVisible(false)} />}
+							{activeSection === 'general' && activeTab === 'about' && <AboutSection vm={vm} />}
+							{activeSection === 'general' && activeTab !== 'about' && <GeneralSection vm={vm} tab={activeTab} onTranscriptOpened={() => setVisible(false)} />}
 							{activeSection === 'appearance' && <AppearanceSection vm={vm} />}
-							{activeSection === 'transcription' && <TranscriptionSection tab={activeTab} />}
-							{activeSection === 'models' && <ModelsSection vm={vm} tab={activeTab} />}
+							{activeSection === 'transcription' && <TranscriptionSection vm={vm} tab={activeTab} />}
 							{activeSection === 'translation' && <TranslationSection tab={activeTab} />}
 							{activeSection === 'summarize' && <SummarizeSection vm={vm} />}
 							{activeSection === 'dictation' && <DictationSection />}

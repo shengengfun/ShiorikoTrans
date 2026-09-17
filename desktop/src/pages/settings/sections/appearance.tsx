@@ -322,7 +322,6 @@ export function AppearanceSection({ vm }: { vm: SettingsViewModel }) {
 									</>
 								)}
 							</div>
-							<p className="text-xs leading-relaxed text-muted-foreground">{m.appearanceInfo()}</p>
 						</div>
 					}
 				/>

@@ -13,7 +13,6 @@ import HTMLView from './html-view'
 import { toast } from 'sonner'
 import { invoke } from '@tauri-apps/api/core'
 import * as clipboard from '@tauri-apps/plugin-clipboard-manager'
-import { toDocx } from '~/lib/docx'
 import { path } from '@tauri-apps/api'
 import Markdown from 'react-markdown'
 import { Button } from '~/components/ui/button'
@@ -147,6 +146,8 @@ export default function TextArea({
 
 		if (format === 'docx') {
 			const fileName = await path.basename(filePath)
+			// `docx` is a large dependency and only needed for this export format.
+			const { toDocx } = await import('~/lib/docx')
 			const doc = await toDocx(fileName, segments ?? [], preference.textAreaDirection, speakerLabel)
 			const arrayBuffer = await doc.arrayBuffer()
 			await fs.writeFile(filePath, new Uint8Array(arrayBuffer))

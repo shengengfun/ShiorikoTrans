@@ -1,11 +1,14 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, Suspense, lazy, useEffect, useState } from 'react'
 import TitleBar from './title-bar'
 import StatusBar from './status-bar'
 import DropModal from './drop-modal'
-import SettingsModal from './settings-modal'
 import ModelSettingsDialog from './model-settings-dialog'
 import PageTransition from './page-transition'
 import ModelDownloadPrompt from './model-download-prompt'
+
+// The settings surface (registry + every section) is only needed once the user
+// opens it, so it is kept out of the startup bundle.
+const SettingsModal = lazy(() => import('./settings-modal'))
 
 export default function Layout({ children }: { children: ReactNode }) {
 	const [settingsVisible, setSettingsVisible] = useState(false)
@@ -37,7 +40,11 @@ export default function Layout({ children }: { children: ReactNode }) {
 
 	return (
 		<div className="flex h-screen flex-col overflow-hidden text-foreground">
-			{settingsVisible && <SettingsModal visible={settingsVisible} setVisible={setSettingsVisible} scrollTo={settingsScrollTo} />}
+			{settingsVisible && (
+				<Suspense fallback={<div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-md" />}>
+					<SettingsModal visible={settingsVisible} setVisible={setSettingsVisible} scrollTo={settingsScrollTo} />
+				</Suspense>
+			)}
 			<ModelSettingsDialog open={modelSettingsVisible} setOpen={setModelSettingsVisible} modelPath={modelSettingsPath} />
 			<DropModal />
 			<ModelDownloadPrompt />

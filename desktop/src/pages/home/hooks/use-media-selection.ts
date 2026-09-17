@@ -2,36 +2,29 @@ import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import { basename } from '@tauri-apps/api/path'
 import * as dialog from '@tauri-apps/plugin-dialog'
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import * as config from '~/lib/config'
 import type { NamedPath } from '~/lib/types'
 import { useFilesContext } from '~/providers/files-provider'
 import { usePreferenceProvider } from '~/providers/preference'
 import { useTranscriptionProvider } from '~/providers/transcription'
 
+/**
+ * File / folder selection for the transcription page.
+ *
+ * The selection is kept across navigation on purpose: a finished transcription
+ * is handed over to the translation page, and coming back must not silently drop
+ * the file (that used to make a second run look broken). Only an explicit
+ * "change file" or a new folder pick replaces it.
+ */
 export function useMediaSelection() {
-	const location = useLocation()
 	const navigate = useNavigate()
 	const preference = usePreferenceProvider()
-	const { files, setFiles, consumeExplicitOpen } = useFilesContext()
+	const { files, setFiles } = useFilesContext()
 	const session = useTranscriptionProvider()
 	const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
 	const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
 	const [isCollectingFolder, setIsCollectingFolder] = useState(false)
-
-	useEffect(() => {
-		// Keep the running session's file when the user comes back to the page.
-		if (session.loading && session.activeFile) return
-		// A file opened from the recent list / a finished recording was selected
-		// deliberately while we navigated here — do not wipe it.
-		if (consumeExplicitOpen(files)) {
-			setSelectedFolder(null)
-			return
-		}
-		setFiles([])
-		setSelectedFolder(null)
-		if (files.length !== 1) setAudio(null)
-	}, [location])
 
 	// Restore the selection of an in-flight transcription (page may have been
 	// unmounted while it was running).

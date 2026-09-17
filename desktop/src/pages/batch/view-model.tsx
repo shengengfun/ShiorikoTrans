@@ -24,7 +24,6 @@ import { basename } from '@tauri-apps/api/path'
 import { Claude, Ollama, Llm, OpenAICompatible } from '~/lib/llm'
 import * as transcript from '~/lib/transcript'
 import { path } from '@tauri-apps/api'
-import { toDocx } from '~/lib/docx'
 import { toast } from 'sonner'
 
 export function viewModel() {
@@ -254,6 +253,7 @@ export function viewModel() {
 					// Write file
 					if (format === 'docx') {
 						const fileName = await path.basename(dst)
+						const { toDocx } = await import('~/lib/docx')
 						const doc = await toDocx(fileName, res.segments, preference.textAreaDirection, speakerLabel)
 						const arrayBuffer = await doc.arrayBuffer()
 						const buffer = new Uint8Array(arrayBuffer)

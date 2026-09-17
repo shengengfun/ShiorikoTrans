@@ -62,3 +62,28 @@ python ../plans/settings-overhaul/settings-overhaul_001.py   # 幂等，仅补�
 ```
 
 未做：真机点击验证（本机 `pnpm dev` 没有 Tauri runtime，`lib/ytdlp.ts` 会在模块加载期报错白屏）。
+
+## 第二轮（v1.0.9 之后）
+
+- **模型分节并入转录**：`SectionId` 去掉 `models`，模型的三组内容（目录 / 已安装 / 存储位置）
+  变成转录分节的三个子标签，导航少一层。`SETTINGS` 里模型条目的 `section` 全部改为 `transcription`。
+- **修复「发送到翻译页」后第二次转录不正常**：两个原因 —— ①首页的导航 effect 会把上一次的选择清空，
+  回到首页后文件没了；②自动跳转 effect 只看 `segments`，重新挂载后用**旧转录**立刻又把人踢回翻译页。
+  现在选择跨导航保留，并用转录轮次（`runId`，每次成功转录 +1）判定「这次真的刚跑完」。
+  顺带删掉了 `FilesProvider.openFiles/consumeExplicitOpen` 这套为绕开清空而生的标记机制。
+- **关于页重做**（`sections/about.tsx`）：图标 + 版本 + 系统/提交号 + 当前模型/引擎/ffmpeg/CPU，
+  维护动作（复制诊断 / 复制日志 / 打开日志·临时·模型目录 / 检查更新），项目链接，重置（两步确认），
+  许可与致谢。
+- **翻译可用性**：`probeTranslationEngine()` 先探测本地端点（2.5s 超时），不可达时给出可执行提示而
+  不是 `error sending request for url (http://127.0.0.1:8080/v1/chat/completions)`；设置里显示
+  服务在线/未启动，并给出**绝对路径**的 `llama-server` 启动命令（一键复制）。远端引擎不受此检查影响。
+- **下载提速**：新增 HuggingFace 镜像开关（`prefs_hf_mirror`，把 `huggingface.co` 重写为
+  `hf-mirror.com`，模型与翻译模型都生效）；进度弹窗按秒显示速度与预计剩余时间。
+- **文案瘦身**：`settings-overhaul_002.py` 删掉 36 条描述（只保留 10 条真会踩坑的），导航里不再显示
+  分节描述，外观页的长段落移除。
+- **UI 继续对齐参考项目**：设置侧栏可拖拽调宽（200–340px，RinaDown 的分隔条做法），分节标签过多时
+  横向滚动，设置行加悬停反馈。
+- **性能**：设置弹窗与 `docx` 导出改为按需加载（首屏 chunk 1.77MB → 1.34MB，另拆出 87KB 设置块与
+  329KB docx 块），Vite 配置 `manualChunks` 与 chunk 警告阈值，转录快照内容未变化时不再重写存储，
+  窗口隐藏时状态栏停止轮询。
+

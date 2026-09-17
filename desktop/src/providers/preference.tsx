@@ -111,6 +111,9 @@ export interface Preference {
 
 	forceCpu: boolean
 	setForceCpu: ModifyState<boolean>
+	/** Rewrite HuggingFace download URLs to hf-mirror.com (slow/unreachable HF). */
+	hfMirrorEnabled: boolean
+	setHfMirrorEnabled: ModifyState<boolean>
 	vulkanDevice: number | null
 	setVulkanDevice: ModifyState<number | null>
 	enableDiagnostics: boolean
@@ -280,6 +283,7 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [stableTimestampsEnabled, setStableTimestampsEnabled] = useLocalStorage<boolean>('prefs_stable_timestamps_enabled', false)
 	const [gpuDevice, setGpuDevice] = useLocalStorage<number | null>('prefs_gpu_device', null)
 	const [forceCpu, setForceCpu] = useLocalStorage<boolean>('prefs_force_cpu', false)
+	const [hfMirrorEnabled, setHfMirrorEnabled] = useLocalStorage<boolean>('prefs_hf_mirror', false)
 	const [vulkanDevice, setVulkanDevice] = useLocalStorage<number | null>('prefs_vulkan_device', null)
 	const [enableDiagnostics, setEnableDiagnostics] = useLocalStorage<boolean>('prefs_enable_diagnostics', false)
 	const [modelQuantization, setModelQuantization] = useLocalStorage<string>('prefs_model_quantization', 'auto')
@@ -500,6 +504,8 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setGpuDevice,
 		forceCpu,
 		setForceCpu,
+		hfMirrorEnabled,
+		setHfMirrorEnabled,
 		vulkanDevice,
 		setVulkanDevice,
 		enableDiagnostics,

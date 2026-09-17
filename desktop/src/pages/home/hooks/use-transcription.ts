@@ -37,6 +37,9 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 	// Source of the running/last session, so the transcription page can restore
 	// its selection after the user navigated away and back.
 	const [activeFile, setActiveFile] = useState<{ name: string; path: string } | null>(null)
+	// Bumped once per finished run so the UI can tell "a new transcript arrived"
+	// apart from "the page was re-mounted with an old one".
+	const [runId, setRunId] = useState(0)
 
 	useEffect(() => { preferenceRef.current = preference }, [preference])
 
@@ -141,6 +144,7 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 			toast.success(m.transcribeTook({ total: String(total) }), { position: 'bottom-center' })
 			trackAnalyticsEvent(analyticsEvents.TRANSCRIBE_SUCCEEDED, { source: 'home', duration_seconds: total, segments_count: completedSegments.length })
 			preferenceRef.current.addRecentFile(path.split(/[\\/]/).pop() || path, path)
+			setRunId((id) => id + 1)
 		} catch (error) {
 			if (!abortRef.current) {
 				stopKeepAwake()
@@ -192,5 +196,6 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 		// Restoring a saved transcript has to name the session file too, otherwise
 		// saving/exporting would fall back to a generic name.
 		setActiveFile,
+		runId,
 	}
 }

@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import * as fsExt from '@tauri-apps/plugin-fs'
 import * as pathExt from '@tauri-apps/api/path'
+import { resolveModelUrl } from './model'
 import { modelKindDir } from './model-paths'
 
 /** A local translation model (GGUF, served by an OpenAI-compatible local server). */
@@ -112,10 +113,10 @@ export async function isTranslateModelInstalled(entry: TranslateModelEntry): Pro
 }
 
 /** Downloads a translation model into `models/translate` (skips if present). */
-export async function installTranslateModel(entry: TranslateModelEntry): Promise<string | null> {
+export async function installTranslateModel(entry: TranslateModelEntry, mirror = false): Promise<string | null> {
 	const target = await translateModelPath(entry.filename)
 	if (await fsExt.exists(target)) return target
-	const result = await invoke<{ status: 'completed' } | { status: 'cancelled' }>('download_model', { url: entry.url, path: target })
+	const result = await invoke<{ status: 'completed' } | { status: 'cancelled' }>('download_model', { url: resolveModelUrl(entry.url, mirror), path: target })
 	return result.status === 'completed' ? target : null
 }
 

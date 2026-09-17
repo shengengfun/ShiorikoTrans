@@ -25,7 +25,7 @@ export function SummarizeSection({ vm }: { vm: SettingsViewModel }) {
 
 	return (
 		<div className="space-y-5">
-			<SettingsGroup title={m.processWithLlm()} description={m.sectionSummarizeDesc()}>
+			<SettingsGroup title={m.processWithLlm()}>
 				<SettingRow
 					id="summarizeEnabled"
 					description={config_.enabled ? m.infoLlmSummarize() : m.summarizeDisabledHint()}

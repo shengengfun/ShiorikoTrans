@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Check, Copy, Download } from 'lucide-react'
 import { m } from '~/paraglide/messages.js'
 import { defaultClaudeConfig, defaultOllamaConfig, OpenAICompatible } from '~/lib/llm'
-import { TRANSLATE_LANGUAGES } from '~/lib/translate'
+import { TRANSLATE_LANGUAGES, isLocalEndpoint, probeTranslationEngine } from '~/lib/translate'
 import {
 	DEFAULT_LOCAL_BASE_URL,
 	LOCAL_SERVER_PRESETS,
@@ -12,6 +12,7 @@ import {
 	installTranslateModel,
 	isTranslateModelInstalled,
 	llamaServerCommand,
+	translateModelPath,
 } from '~/lib/translate-models'
 import { useModelDownload } from '~/lib/model-download'
 import { useTranslationSession } from '~/providers/translation'
@@ -56,9 +57,42 @@ function EngineTab() {
 	const preference = usePreferenceProvider()
 	const config = preference.translationLlmConfig
 	const [checking, setChecking] = useState(false)
+	const [reachable, setReachable] = useState<boolean | null>(null)
+	const [command, setCommand] = useState('')
 
 	function setConfig(next: Partial<typeof config>) {
 		preference.setTranslationLlmConfig({ ...config, ...next })
+	}
+
+	// The built-in engine is a server the user runs, so tell them up-front whether
+	// anything is listening instead of failing halfway through a translation.
+	useEffect(() => {
+		let cancelled = false
+		setReachable(null)
+		probeTranslationEngine(config).then(({ ok }) => {
+			if (!cancelled) setReachable(ok)
+		})
+		return () => {
+			cancelled = true
+		}
+	}, [config.platform, config.openaiBaseUrl, config.ollamaBaseUrl, config.openaiApiKey, config.claudeApiKey])
+
+	// Absolute command so it can be pasted straight into a terminal.
+	useEffect(() => {
+		let cancelled = false
+		translateModelPath(config.model || 'model.gguf')
+			.then((path) => {
+				if (!cancelled) setCommand(llamaServerCommand(path))
+			})
+			.catch(() => setCommand(llamaServerCommand(config.model || 'model.gguf')))
+		return () => {
+			cancelled = true
+		}
+	}, [config.model])
+
+	async function copyCommand() {
+		await clipboard.writeText(command)
+		toast.success(m.copied())
 	}
 
 	function changePlatform(value: string) {
@@ -87,7 +121,7 @@ function EngineTab() {
 
 	return (
 		<div className="space-y-5">
-			<SettingsGroup title={m.translationEngine()} description={m.sectionTranslationDesc()}>
+			<SettingsGroup title={m.translationEngine()}>
 				<SettingRow id="enableTranslation" control={<Switch checked={config.enabled} onCheckedChange={(enabled) => setConfig({ enabled })} />} />
 				<SettingRow
 					id="translationEngine"
@@ -181,12 +215,33 @@ function EngineTab() {
 				<SettingRow
 					id="testConnection"
 					control={
-						<Button variant="outline" size="sm" className="h-8" onClick={testConnection} disabled={checking}>
-							{checking ? m.checkLoading() : m.testConnection()}
-						</Button>
+						<div className="flex items-center gap-2">
+							<StateBadge tone={reachable === null ? 'muted' : reachable ? 'primary' : 'warning'}>
+								{reachable === null ? m.translateEngineChecking() : reachable ? m.translateEngineOnline() : m.translateEngineOffline()}
+							</StateBadge>
+							<Button variant="outline" size="sm" className="h-8" onClick={testConnection} disabled={checking}>
+								{checking ? m.checkLoading() : m.testConnection()}
+							</Button>
+						</div>
 					}
 				/>
 			</SettingsGroup>
+
+			{reachable === false && isLocalEndpoint(config) && (
+				<SettingsGroup title={m.translateEngineSetup()}>
+					<SettingPanel id="translationEngine">
+						<div className="flex items-center gap-2">
+							<span className="min-w-0 flex-1 truncate rounded-lg bg-muted/60 px-2.5 py-1.5 font-mono text-[11px] text-muted-foreground" title={command}>
+								{command}
+							</span>
+							<Button variant="outline" size="sm" className="h-7 shrink-0 gap-1.5 px-2" onClick={copyCommand}>
+								<Copy className="h-3.5 w-3.5" />
+								{m.copyCommand()}
+							</Button>
+						</div>
+					</SettingPanel>
+				</SettingsGroup>
+			)}
 		</div>
 	)
 }
@@ -211,7 +266,9 @@ function TranslateModelsTab() {
 		if (!entry) return
 		setInstallingId(entry.id)
 		try {
-			const path = await withProgress(m.downloadingModelNamed({ name: entry.name }) as string, () => installTranslateModel(entry))
+			const path = await withProgress(m.downloadingModelNamed({ name: entry.name }) as string, () =>
+				installTranslateModel(entry, preference.hfMirrorEnabled),
+			)
 			if (path) {
 				// Point the engine at the freshly downloaded file straight away.
 				preference.setTranslationLlmConfig({ ...preference.translationLlmConfig, model: entry.filename })
@@ -226,7 +283,7 @@ function TranslateModelsTab() {
 	}
 
 	return (
-		<SettingsGroup title={m.translateModels()} description={m.translateModelsInfo()}>
+		<SettingsGroup title={m.translateModels()}>
 			<SettingPanel id="translateModels" className="space-y-2">
 				<ul className="space-y-2">
 					{TRANSLATE_MODELS.map((entry) => {
