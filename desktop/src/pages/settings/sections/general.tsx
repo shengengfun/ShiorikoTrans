@@ -1,4 +1,5 @@
 import { AlertTriangle, FileAudio, Trash2, X } from 'lucide-react'
+import { useLocalStorage } from 'usehooks-ts'
 import { m } from '~/paraglide/messages.js'
 import { getLocale } from '~/paraglide/runtime.js'
 import { ReactComponent as LinkIcon } from '~/icons/link.svg'
@@ -33,6 +34,9 @@ export function GeneralSection({ vm, tab, onTranscriptOpened }: { vm: SettingsVi
 
 function BasicTab({ vm }: { vm: SettingsViewModel }) {
 	const preference = vm.preference
+	// Kept in localStorage (next to the home page switch) so the recording tab and
+	// the transcript page agree without a round trip through the store.
+	const [sendToTranslate, setSendToTranslate] = useLocalStorage('prefs_send_to_translate', false)
 
 	return (
 		<AdaptiveSections>
@@ -128,6 +132,11 @@ function BasicTab({ vm }: { vm: SettingsViewModel }) {
 					control={<Switch checked={preference.soundOnTranslateFinish} onCheckedChange={preference.setSoundOnTranslateFinish} />}
 				/>
 				<SettingRow id="focusOnFinish" control={<Switch checked={preference.focusOnFinish} onCheckedChange={preference.setFocusOnFinish} />} />
+				<SettingRow
+					id="sendToTranslate"
+					control={<Switch checked={sendToTranslate} onCheckedChange={setSendToTranslate} />}
+				/>
+				<SettingRow id="sendToSummary" control={<Switch checked={preference.sendToSummary} onCheckedChange={preference.setSendToSummary} />} />
 			</SettingsGroup>
 
 			<SettingsGroup title={m.ytdlpOptions()}>

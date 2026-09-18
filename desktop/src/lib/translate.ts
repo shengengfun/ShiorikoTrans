@@ -1,5 +1,4 @@
-import { fetch as httpFetch } from '@tauri-apps/plugin-http'
-import { m } from '~/paraglide/messages.js'
+import { ensureEngineRunning, isLocalUrl, probeEndpoint } from './local-engine'
 import { Claude, type Llm, type LlmConfig, Ollama, OpenAICompatible } from './llm'
 import type { Segment } from './transcript'
 
@@ -38,8 +37,7 @@ function makeLlm(config: LlmConfig): Llm {
 
 /** True when the configured OpenAI-compatible endpoint runs on this machine. */
 export function isLocalEndpoint(config: LlmConfig | null | undefined): boolean {
-	const url = config?.openaiBaseUrl ?? ''
-	return config?.platform === 'openai' && /127\.0\.0\.1|localhost|\[::1\]/.test(url)
+	return config?.platform === 'openai' && isLocalUrl(config.openaiBaseUrl)
 }
 
 /** Short human-readable description of the active translation engine. */
@@ -64,40 +62,22 @@ export function translationEndpoint(config: LlmConfig): string | null {
 /**
  * Is something actually listening on the configured endpoint?
  *
- * The built-in local engine expects a llama.cpp / LM Studio style server that the
- * user runs themselves, so "is the server up" is the difference between a working
- * translation and a raw `error sending request for url (http://127.0.0.1:8080/...)`.
- * A 401/404 still proves the server answered, so those count as reachable.
+ * The built-in local engine expects a llama.cpp style server, so "is the server
+ * up" is the difference between a working translation and a raw `error sending
+ * request for url (http://127.0.0.1:8080/...)`. A 401/404 still proves the
+ * server answered, so those count as reachable.
  */
 export async function probeTranslationEngine(config: LlmConfig, timeoutMs = 2500): Promise<{ ok: boolean; endpoint: string | null }> {
 	const endpoint = translationEndpoint(config)
 	if (!endpoint) return { ok: true, endpoint: null }
-	try {
-		const controller = new AbortController()
-		const timer = window.setTimeout(() => controller.abort(), timeoutMs)
-		try {
-			const response = await httpFetch(`${endpoint}/models`, {
-				signal: controller.signal,
-				headers: config.openaiApiKey ? { Authorization: `Bearer ${config.openaiApiKey}` } : undefined,
-			})
-			return { ok: response.status < 500, endpoint }
-		} finally {
-			window.clearTimeout(timer)
-		}
-	} catch (error) {
-		console.error('translation engine probe failed:', error)
-		return { ok: false, endpoint }
-	}
+	return { ok: await probeEndpoint(endpoint, config.openaiApiKey, timeoutMs), endpoint }
 }
 
 /** Throws a readable error when the translation channel cannot be reached. */
 async function ensureTranslationEngineReady(config: LlmConfig) {
-	const { ok, endpoint } = await probeTranslationEngine(config)
-	if (ok || !endpoint) return
-	// A hosted service reports its own (more specific) errors; only the
-	// self-hosted case is ambiguous enough to deserve a dedicated message.
-	if (!/127\.0\.0\.1|localhost|\[::1\]/.test(endpoint)) return
-	throw new Error(m.translateEngineUnreachable({ url: endpoint }))
+	// Hosted services report their own, more specific errors; for a local endpoint
+	// the app starts the bundled engine instead of asking the user to run one.
+	await ensureEngineRunning(config)
 }
 
 /** Translates a raw text blob (used by the translation page). */

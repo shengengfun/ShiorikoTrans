@@ -76,6 +76,20 @@ export const SETTINGS = {
 		label: () => m.focusWindowOnFinish(),
 		keywords: 'focus 窗口 前置 完成',
 	},
+	sendToTranslate: {
+		id: 'sendToTranslate',
+		section: 'general',
+		tab: 'basic',
+		label: () => m.sendToTranslate(),
+		keywords: 'send translate after transcription 发送 翻译页 转录',
+	},
+	sendToSummary: {
+		id: 'sendToSummary',
+		section: 'general',
+		tab: 'basic',
+		label: () => m.sendToSummary(),
+		keywords: 'send summary after transcription 发送 总结页 转录',
+	},
 	checkYtdlp: {
 		id: 'checkYtdlp',
 		section: 'general',
@@ -341,6 +355,13 @@ export const SETTINGS = {
 		label: () => m.translateModels(),
 		keywords: 'translation model gguf 翻译 模型 下载',
 	},
+	translationLocalEngine: {
+		id: 'translationLocalEngine',
+		section: 'translation',
+		tab: 'engine',
+		label: () => m.translationLocalTitle(),
+		keywords: 'local engine llama.cpp runtime start stop 本地 服务 运行时 启动',
+	},
 	translateDefaults: {
 		id: 'translateDefaults',
 		section: 'translation',
@@ -406,6 +427,36 @@ export const SETTINGS = {
 		section: 'summarize',
 		label: () => m.llmPrompt(),
 		keywords: 'prompt 提示词 模板',
+	},
+	summaryPreset: {
+		id: 'summaryPreset',
+		section: 'summarize',
+		label: () => m.summaryPreset(),
+		keywords: 'preset prompt template 预设 提示词 模板 纪要 笔记',
+	},
+	summaryChunkChars: {
+		id: 'summaryChunkChars',
+		section: 'summarize',
+		label: () => m.summaryChunkChars(),
+		keywords: 'chunk chars long transcript 分块 长文本 字数',
+	},
+	summarizeLocalEngine: {
+		id: 'summarizeLocalEngine',
+		section: 'summarize',
+		label: () => m.summaryLocalTitle(),
+		keywords: 'local engine llama.cpp runtime start stop 本地 服务 运行时 启动',
+	},
+	summarizeLocalModels: {
+		id: 'summarizeLocalModels',
+		section: 'summarize',
+		label: () => m.summarizeLocalModels(),
+		keywords: 'local model gguf download 本地 模型 下载',
+	},
+	llmTemperature: {
+		id: 'llmTemperature',
+		section: 'summarize',
+		label: () => m.llmTemperature(),
+		keywords: 'temperature 随机性 采样',
 	},
 	llmMaxTokens: {
 		id: 'llmMaxTokens',

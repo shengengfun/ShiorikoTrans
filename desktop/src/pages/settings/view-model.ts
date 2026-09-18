@@ -16,6 +16,7 @@ import { getIssueUrl, resetApp } from '~/lib/app'
 import { usePreferenceProvider } from '~/providers/preference'
 import { useToastProvider } from '~/providers/toast'
 import { Claude, Llm, Ollama, OpenAICompatible } from '~/lib/llm'
+import { ensureEngineRunning } from '~/lib/local-engine'
 import { UnlistenFn, listen } from '@tauri-apps/api/event'
 import { useNavigate } from 'react-router-dom'
 import { load } from '@tauri-apps/plugin-store'
@@ -143,6 +144,9 @@ export function viewModel() {
 	async function checkLlm() {
 		setLlmError(null)
 		try {
+			// Starting the bundled engine first means "Test" works on a fresh install
+			// instead of reporting a connection refused for a server nobody started.
+			await ensureEngineRunning(preference.llmConfig)
 			const promise = llm!.ask('Hello, how are you?')
 			toast.promise(promise, {
 				error: m.checkError() as string,

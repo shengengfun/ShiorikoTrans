@@ -40,6 +40,7 @@ export default function Home() {
 	const [translating, setTranslating] = useState(false)
 	const [autoOpenTranslate, setAutoOpenTranslate] = useLocalStorage('prefs_send_to_translate', false)
 	const sentRunRef = useRef<number | null>(null)
+	const sentSummaryRunRef = useRef<number | null>(null)
 	const firstFile = vm.files[0]
 
 	async function showWindow() {
@@ -66,6 +67,21 @@ export default function Home() {
 		navigate('/translate', { state: { sourceText, fileName: firstFile.name } })
 	}, [vm.loading, vm.runId, autoOpenTranslate, vm.segments, firstFile, navigate])
 
+	// 勾选后：转写完成即把当前转录文本带到“总结”页
+	useEffect(() => {
+		if (vm.loading) return
+		const isNewRun = sentSummaryRunRef.current !== null && sentSummaryRunRef.current !== vm.runId
+		sentSummaryRunRef.current = vm.runId
+		if (!isNewRun || !vm.preference.sendToSummary || !vm.segments?.length) return
+		vm.setTranscriptTab('summary')
+		if (!vm.preference.llmConfig?.enabled) toast.error(m.needEnableSummarize())
+	}, [vm.loading, vm.runId, vm.preference.sendToSummary, vm.preference.llmConfig?.enabled, vm.segments])
+
+	async function summarizeCurrent() {
+		if (!vm.segments || vm.summarizing) return
+		await vm.summarize(vm.segments, vm.preference.llmConfig?.prompt ?? '', true)
+	}
+
 	async function translateCurrent() {
 		if (!vm.segments || translating) return
 		// Translations use their own channel (local OpenAI-compatible server by
@@ -78,6 +94,7 @@ export default function Home() {
 		setTranslating(true)
 		setActivity({ phase: 'translating', progress: 0 })
 		try {
+			const endpoint = llmConfig.openaiBaseUrl
 			const translated = await translateSegments(
 				vm.segments,
 				translateTarget,
@@ -85,6 +102,8 @@ export default function Home() {
 				(done, total) => setActivity({ phase: 'translating', progress: Math.round((done / total) * 100) }),
 				vm.preference.translateChunkSize,
 			)
+			// The local engine may have picked another port; remember it.
+			if (llmConfig.openaiBaseUrl !== endpoint) vm.preference.setTranslationLlmConfig({ ...llmConfig })
 			if (translated.length) {
 				vm.setTranslatedSegments(translated)
 				vm.setTranscriptTab('translated')
@@ -322,7 +341,7 @@ export default function Home() {
 					</div>
 				</div>
 				<div className="flex min-w-0 flex-col gap-5 md:sticky md:top-6 md:max-h-[calc(100dvh-9rem)] md:self-start md:w-full md:overflow-y-auto">
-					{vm.preference.homeTab === "file" && !vm.loading && (vm.summarizeSegments || vm.translatedSegments) && (
+					{vm.preference.homeTab === "file" && !vm.loading && vm.segments && (
 					<div className="flex items-center justify-center gap-2">
 						<Tabs value={vm.transcriptTab} onValueChange={(v) => vm.setTranscriptTab(v as 'transcript' | 'summary')}>
 							<TabsList className="rounded-xl">
@@ -361,11 +380,27 @@ export default function Home() {
 							onClick={translateCurrent}>
 							{translating ? m.translating() : m.translate()}
 						</Button>
+						<Button variant="outline" size="sm" className="rounded-lg" disabled={vm.summarizing} onClick={summarizeCurrent}>
+							{vm.summarizing ? `${m.summarizeLoading()}${vm.summaryProgress != null ? ` ${vm.summaryProgress}%` : ''}` : m.summarizeNow()}
+						</Button>
 						{!vm.preference.translationLlmConfig?.enabled && <p className="text-xs text-muted-foreground">{m.needEnableTranslation()}</p>}
 					</div>
 				)}
 
 				{vm.preference.homeTab === "file" && (vm.segments || vm.loading) ? (
+					vm.transcriptTab === 'summary' && !vm.summarizeSegments && !vm.loading ? (
+						<div className="flex h-[62vh] min-h-[340px] w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-card/40 p-8 text-center">
+							<p className="max-w-md text-sm text-muted-foreground">{m.summarizeEmptyHint()}</p>
+							<div className="flex items-center gap-2">
+								<Button size="sm" className="rounded-lg" disabled={vm.summarizing} onClick={summarizeCurrent}>
+									{vm.summarizing ? m.summarizeLoading() : m.summarizeNow()}
+								</Button>
+								<Button variant="outline" size="sm" className="rounded-lg" onClick={() => vm.setSettingsVisible(true)}>
+									{m.summarySettings()}
+								</Button>
+							</div>
+						</div>
+					) : (
 					<div className="flex h-[62vh] min-h-[340px] w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lg dark:shadow-2xl">
 						<TextArea
 							file={vm.files[0] ?? vm.activeFile ?? undefined}
@@ -389,6 +424,7 @@ export default function Home() {
 							readonly={vm.loading}
 						/>
 					</div>
+					)
 				) : (
 					<div className="flex h-[62vh] min-h-[340px] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/50 bg-card/40 p-8 text-center">
 						<p className="text-base text-muted-foreground">{m.transcriptWillDisplayedShortly()}</p>

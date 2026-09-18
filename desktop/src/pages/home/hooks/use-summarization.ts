@@ -1,43 +1,63 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { m } from '~/paraglide/messages.js'
 import { toast } from 'sonner'
 import { useLocalStorage } from 'usehooks-ts'
-import { Claude, type Llm, Ollama, OpenAICompatible } from '~/lib/llm'
+import { summarizeText } from '~/lib/summarize'
 import * as transcript from '~/lib/transcript'
 import { usePreferenceProvider } from '~/providers/preference'
 
+/**
+ * Summarisation state for the transcript page.
+ *
+ * The work itself lives in `lib/summarize` so the summary tab and the
+transcription flow share one implementation, and so a long transcript is
+chunked for a small local model instead of failing on one huge request.
+ */
 export function useSummarization() {
 	const preference = usePreferenceProvider()
-	const [llm, setLlm] = useState<Llm | null>(null)
 	const [segments, setSegments] = useState<transcript.Segment[] | null>(null)
 	const [summarizing, setSummarizing] = useState(false)
+	const [progress, setProgress] = useState<number | null>(null)
 	const [transcriptTab, setTranscriptTab] = useLocalStorage<'transcript' | 'translated' | 'summary'>('prefs_transcript_tab', 'transcript')
 
-	useEffect(() => {
-		const config = preference.llmConfig
-		setLlm(config.platform === 'ollama' ? new Ollama(config) : config.platform === 'openai' ? new OpenAICompatible(config) : new Claude(config))
-	}, [preference.llmConfig])
-
 	async function summarize(source: transcript.Segment[], prompt: string, showSummary = false) {
-		if (!llm) return
+		if (!source.length) return
+		const config = preference.llmConfig
+		if (!config?.enabled) {
+			toast.error(m.needEnableSummarize())
+			return
+		}
 		setSummarizing(true)
+		setProgress(0)
 		try {
-			const question = prompt.replace('%s', transcript.asText(source, preference.speakerLabels ? m.speakerPrefix() : null))
-			const answerPromise = llm.ask(question)
+			const text = transcript.asText(source, preference.speakerLabels ? m.speakerPrefix() : null)
+			const endpoint = config.openaiBaseUrl
+			const answerPromise = summarizeText({
+				text,
+				prompt,
+				config,
+				chunkChars: preference.summarizeChunkChars,
+				onProgress: (done, total) => setProgress(Math.round((done / total) * 100)),
+			})
 			toast.promise(answerPromise, {
 				loading: m.summarizeLoading(),
 				error: (error) => String(error),
 				success: m.summarizeSuccess(),
 			})
 			const answer = await answerPromise
+			// The engine may have picked another port; remember it so later runs do not
+			// have to probe the old one first.
+			if (config.openaiBaseUrl !== endpoint) preference.setLlmConfig({ ...config })
 			if (answer) {
 				setSegments([{ start: 0, stop: source[source.length - 1]?.stop ?? 0, text: answer }])
-				if (showSummary) setTranscriptTab('summary')
 			}
+			if (showSummary) setTranscriptTab('summary')
 		} catch (error) {
+			// `toast.promise` already surfaced the reason to the user.
 			console.error(error)
 		} finally {
 			setSummarizing(false)
+			setProgress(null)
 		}
 	}
 
@@ -45,6 +65,7 @@ export function useSummarization() {
 		segments,
 		setSegments,
 		summarizing,
+		progress,
 		transcriptTab,
 		setTranscriptTab,
 		summarize,

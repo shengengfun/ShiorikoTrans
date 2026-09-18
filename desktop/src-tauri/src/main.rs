@@ -10,6 +10,7 @@ mod diagnostics;
 mod dictation_indicator;
 mod error;
 mod ffmpeg;
+mod llama;
 mod logging;
 mod setup;
 mod sona;
@@ -62,7 +63,8 @@ async fn main() -> Result<()> {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .plugin(tauri_plugin_notification::init());
+        .plugin(tauri_plugin_notification::init())
+        .manage(llama::LlamaServerState::default());
 
     if analytics::is_aptabase_configured() {
         let options = tauri_plugin_aptabase::InitOptions {
@@ -110,6 +112,10 @@ async fn main() -> Result<()> {
             cmd::app::get_system_stats,
             cmd::deps::get_ffmpeg_status,
             cmd::deps::install_ffmpeg,
+            llama::get_llama_status,
+            llama::install_llama_server,
+            llama::start_llama_server,
+            llama::stop_llama_server,
             cmd::app::get_logs_folder,
             cmd::app::show_log_path,
             cmd::app::show_temp_path,
@@ -131,7 +137,6 @@ async fn main() -> Result<()> {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
-
     app.run(|app, event| match event {
         // When the main window is closed (X button or custom window control), exit
         // the whole app immediately. A hidden background window (e.g. the
@@ -142,7 +147,7 @@ async fn main() -> Result<()> {
             event: tauri::WindowEvent::CloseRequested { .. },
             ..
         } if label == "main" => {
-            kill_sona_process_tree();
+            kill_sidecar_processes(app);
             std::process::exit(0);
         }
         tauri::RunEvent::WindowEvent {
@@ -153,10 +158,10 @@ async fn main() -> Result<()> {
             app.exit(0);
         }
         tauri::RunEvent::ExitRequested { .. } => {
-            kill_sona_process_tree();
+            kill_sidecar_processes(app);
         }
         tauri::RunEvent::Exit => {
-            kill_sona_process_tree();
+            kill_sidecar_processes(app);
             // Force immediate process exit to prevent the tokio runtime from
             // hanging on unfinished async tasks (e.g. sona HTTP requests with
             // long timeouts) during shutdown. This guarantees the app and all
@@ -166,6 +171,15 @@ async fn main() -> Result<()> {
         _ => {}
     });
     Ok(())
+}
+
+/// Shuts down every process the app started (sona inference + the optional local
+/// translation server) so nothing keeps running after the window is gone.
+fn kill_sidecar_processes(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<llama::LlamaServerState>() {
+        llama::kill_on_exit(&state);
+    }
+    kill_sona_process_tree();
 }
 
 /// Kills the sona process tree synchronously using the globally stored PID.

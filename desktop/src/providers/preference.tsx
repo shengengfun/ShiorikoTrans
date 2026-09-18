@@ -8,8 +8,9 @@ import { ModifyState } from '~/lib/types'
 import { supportedLanguages } from '~/lib/i18n'
 import { getLocale, getTextDirection, setLocale } from '~/paraglide/runtime.js'
 import { m } from '~/paraglide/messages.js'
-import { defaultOllamaConfig, LlmConfig, defaultOpenAIConfig } from '~/lib/llm'
-import { DEFAULT_LOCAL_BASE_URL } from '~/lib/translate-models'
+import { LlmConfig, defaultOpenAIConfig } from '~/lib/llm'
+import { DEFAULT_SUMMARY_CHUNK_CHARS } from '~/lib/summarize'
+import { DEFAULT_LOCAL_BASE_URL, DEFAULT_LOCAL_MODEL } from '~/lib/translate-models'
 import { message } from '@tauri-apps/plugin-dialog'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { ModelMetadata } from '~/lib/model'
@@ -86,6 +87,12 @@ export interface Preference {
 	setTranslateChunkSize: ModifyState<number>
 	soundOnTranslateFinish: boolean
 	setSoundOnTranslateFinish: ModifyState<boolean>
+	/** Characters per summarisation chunk (`0` sends the whole transcript). */
+	summarizeChunkChars: number
+	setSummarizeChunkChars: ModifyState<number>
+	/** Open the summary tab automatically once a transcription finishes. */
+	sendToSummary: boolean
+	setSendToSummary: ModifyState<boolean>
 	ffmpegOptions: FfmpegOptions
 	setFfmpegOptions: ModifyState<FfmpegOptions>
 	resetOptions: () => void
@@ -176,11 +183,28 @@ function defaultTranslateLlmConfig(): LlmConfig {
 	return {
 		...defaultOpenAIConfig(),
 		enabled: false,
-		model: 'Hunyuan-MT-7B.Q4_K_M.gguf',
+		model: DEFAULT_LOCAL_MODEL,
 		openaiBaseUrl: DEFAULT_LOCAL_BASE_URL,
 		openaiApiKey: '',
 		temperature: 0.2,
 		maxTokens: 4096,
+	}
+}
+
+/**
+ * Summarisation defaults to the same built-in engine: a small local model that
+ * the app downloads and serves itself, so summarising works without Ollama or a
+ * cloud API key. A hosted provider can still be selected in the settings.
+ */
+function defaultSummarizeLlmConfig(): LlmConfig {
+	return {
+		...defaultOpenAIConfig(),
+		enabled: false,
+		model: DEFAULT_LOCAL_MODEL,
+		openaiBaseUrl: DEFAULT_LOCAL_BASE_URL,
+		openaiApiKey: '',
+		temperature: 0.3,
+		maxTokens: 2048,
 	}
 }
 
@@ -221,7 +245,7 @@ const defaultOptions = {
 		custom_command: null,
 	},
 	storeRecordInDocuments: true,
-	llmConfig: defaultOllamaConfig(),
+	llmConfig: defaultSummarizeLlmConfig(),
 	ytDlpVersion: null,
 	shouldCheckYtDlpVersion: true,
 }
@@ -269,6 +293,8 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [translationLlmConfig, setTranslationLlmConfig] = useLocalStorage<LlmConfig>('prefs_translation_llm_config', defaultTranslateLlmConfig())
 	const [translateChunkSize, setTranslateChunkSize] = useLocalStorage<number>('prefs_translate_chunk_size', 25)
 	const [soundOnTranslateFinish, setSoundOnTranslateFinish] = useLocalStorage<boolean>('prefs_sound_on_translate_finish', true)
+	const [summarizeChunkChars, setSummarizeChunkChars] = useLocalStorage<number>('prefs_summarize_chunk_chars', DEFAULT_SUMMARY_CHUNK_CHARS)
+	const [sendToSummary, setSendToSummary] = useLocalStorage<boolean>('prefs_send_to_summary', false)
 	const [ytDlpVersion, setYtDlpVersion] = useLocalStorage<string | null>('prefs_ytdlp_version', null)
 	const [shouldCheckYtDlpVersion, setShouldCheckYtDlpVersion] = useLocalStorage<boolean>('prefs_should_check_ytdlp_version', true)
 	const [advancedTranscribeOptions, setAdvancedTranscribeOptions] = useLocalStorage<AdvancedTranscribeOptions>('prefs_advanced_transcribe_options', {
@@ -458,6 +484,10 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setSoundOnFinish,
 		soundOnTranslateFinish,
 		setSoundOnTranslateFinish,
+		summarizeChunkChars,
+		setSummarizeChunkChars,
+		sendToSummary,
+		setSendToSummary,
 		translateChunkSize,
 		setTranslateChunkSize,
 		focusOnFinish,

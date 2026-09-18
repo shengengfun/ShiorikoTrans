@@ -70,6 +70,16 @@ fn publish_download(partial: &Path, destination: &Path) -> Result<()> {
     }
 }
 
+/// Streams `url` into `destination`, emitting the shared `download_progress`
+/// events. Used by the on-demand sidecar runtimes (ffmpeg, llama.cpp) that are
+/// fetched after installation instead of being bundled.
+pub async fn download_with_progress(app_handle: &tauri::AppHandle, url: &str, destination: &Path) -> Result<()> {
+    match download_to_partial(app_handle, url, destination, false).await? {
+        DownloadOutcome::Completed => Ok(()),
+        DownloadOutcome::Cancelled => bail!("download cancelled"),
+    }
+}
+
 async fn download_to_partial(
     app_handle: &tauri::AppHandle,
     url: &str,

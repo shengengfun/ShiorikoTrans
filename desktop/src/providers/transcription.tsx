@@ -45,6 +45,8 @@ export interface TranscriptionProviderValue {
 	summarizeSegments: transcript.Segment[] | null
 	setSummarizeSegments: Dispatch<SetStateAction<transcript.Segment[] | null>>
 	summarizing: boolean
+	/** Summarisation progress in percent, `null` when idle. */
+	summaryProgress: number | null
 	transcriptTab: 'transcript' | 'translated' | 'summary'
 	setTranscriptTab: (value: 'transcript' | 'translated' | 'summary') => void
 	summarize: (source: transcript.Segment[], prompt: string, showSummary?: boolean) => Promise<void>
@@ -82,7 +84,15 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 	const preference = usePreferenceProvider()
 	const { setFiles } = useFilesContext()
 
-	const { segments: summarizeSegments, setSegments: setSummarizeSegments, summarizing, transcriptTab, setTranscriptTab, summarize } = useSummarization()
+	const {
+		segments: summarizeSegments,
+		setSegments: setSummarizeSegments,
+		summarizing,
+		progress: summaryProgress,
+		transcriptTab,
+		setTranscriptTab,
+		summarize,
+	} = useSummarization()
 
 	const {
 		loading,
@@ -234,6 +244,7 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 				summarizeSegments,
 				setSummarizeSegments,
 				summarizing,
+				summaryProgress,
 				transcriptTab,
 				setTranscriptTab,
 				summarize,

@@ -93,6 +93,20 @@ export const LOCAL_SERVER_PRESETS = [
 
 export const DEFAULT_LOCAL_BASE_URL = LOCAL_SERVER_PRESETS[0].baseUrl
 
+/**
+ * Default on-device model: the smallest entry in the catalogue, so the first
+ * run downloads ~1 GB instead of 4.4 GB and still works on a laptop CPU. Bigger
+ * entries stay available for quality, and every entry can be swapped at any
+ * time in the settings (translation and summarisation share the folder).
+ */
+export const DEFAULT_LOCAL_MODEL = 'Qwen3-1.7B-Q4_K_M.gguf'
+
+/**
+ * The GGUF catalogue is shared: the same small models serve translation and
+ * summarisation, and both live in the same folder (`models/translate`).
+ */
+export const LOCAL_MODELS = TRANSLATE_MODELS
+
 /** `models/translate` — where the downloaded translation models live. */
 export async function translateModelsDir(): Promise<string> {
 	const modelsFolder = await invoke<string>('get_models_folder')
