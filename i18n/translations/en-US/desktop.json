@@ -622,5 +622,17 @@
 	"summaryPreset": "Prompt preset",
 	"summarySettings": "Summary settings",
 	"useBuiltinLocalModel": "Use built-in local model",
-	"useModel": "Use"
+	"useModel": "Use",
+	"engineBuiltin": "Built-in translation model (offline, no setup)",
+	"engineOpenAICompatible": "OpenAI-compatible endpoint (advanced)",
+	"translateBuiltinTitle": "Built-in translation model",
+	"translateBuiltinHint": "A translation-only model the app runs itself: fully offline, no API key, used directly while translating.",
+	"translateBuiltinReady": "Model ready",
+	"translateBuiltinMissing": "Model not downloaded",
+	"translateBuiltinDownload": "Download model",
+	"translateBuiltinSizeHint": "The first run downloads about {size} MB of model files; afterwards translation is fully offline.",
+	"downloadingTranslationModel": "Downloading the translation model",
+	"needDownloadTranslateModel": "Download the built-in translation model first (Settings → Translation → Engine).",
+	"translateSourceLanguage": "Source language",
+	"translateSourceAuto": "Detect automatically"
 }

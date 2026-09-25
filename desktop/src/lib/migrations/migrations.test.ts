@@ -16,7 +16,7 @@ describe('local storage migrations', () => {
 		runMigrations()
 
 		expect(localStorage.getItem(localStorageKey)).toBe('fr-FR')
-		expect(localStorage.getItem('shiorikotrans:migration-version')).toBe('1')
+		expect(localStorage.getItem('shiorikotrans:migration-version')).toBe('2')
 
 		localStorage.setItem('prefs_display_language', JSON.stringify('he-IL'))
 		runMigrations()
@@ -31,6 +31,6 @@ describe('local storage migrations', () => {
 		runMigrations()
 
 		expect(localStorage.getItem(localStorageKey)).toBe('he-IL')
-		expect(localStorage.getItem('shiorikotrans:migration-version')).toBe('1')
+		expect(localStorage.getItem('shiorikotrans:migration-version')).toBe('2')
 	})
 })

@@ -1,0 +1,18 @@
+Release 1.0.12: built-in offline translation, window fixes
+
+- translate: run a dedicated MT model (NLLB-200, int8 ONNX) in-process on the
+  ONNX Runtime that is already bundled, so translating needs no server, no API
+  key and no configuration; the model is downloaded once from the UI. The
+  built-in engine becomes the default and legacy llama.cpp configs are migrated.
+- window: the frameless title bar could not drag the window and its minimise /
+  maximise buttons did nothing — `core:window:default` does not include
+  `allow-start-dragging` / `allow-minimize` / `allow-maximize` / `allow-unmaximize`
+  (the drag region also needs `data-tauri-drag-region="deep"`).
+- window: create the window hidden and show it once the page has loaded, then
+  re-apply its size, so WebView2 adopts the real client rect instead of leaving
+  the UI half drawn until the user resizes the window by hand.
+- home: the transcript column is stretched to the height of the settings column
+  and the root font is slightly smaller so Chinese labels are no longer clipped.
+- fix a pre-existing compile error in sona/tests.rs that broke `cargo test`.
+
+Co-authored-by: DeepSeek <noreply@deepseek.com>

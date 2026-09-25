@@ -362,6 +362,20 @@ export const SETTINGS = {
 		label: () => m.translationLocalTitle(),
 		keywords: 'local engine llama.cpp runtime start stop 本地 服务 运行时 启动',
 	},
+	translationBuiltinEngine: {
+		id: 'translationBuiltinEngine',
+		section: 'translation',
+		tab: 'engine',
+		label: () => m.translateBuiltinTitle(),
+		keywords: 'builtin offline nllb model download 内置 离线 模型 下载',
+	},
+	translateSourceLanguage: {
+		id: 'translateSourceLanguage',
+		section: 'translation',
+		tab: 'options',
+		label: () => m.translateSourceLanguage(),
+		keywords: 'source language auto detect 源语言 自动检测',
+	},
 	translateDefaults: {
 		id: 'translateDefaults',
 		section: 'translation',

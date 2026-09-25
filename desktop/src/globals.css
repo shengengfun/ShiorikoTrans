@@ -200,6 +200,10 @@ html.dictation-indicator-window #root {
 	}
 
 	html {
+		/* Slightly smaller root size: every rem-based step of the design system
+		   (text size *and* the spacing scale) shrinks by ~6%, so long Chinese
+		   labels are no longer clipped by the boxes around them. */
+		font-size: 15px;
 		font-family: 'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
 	}
 

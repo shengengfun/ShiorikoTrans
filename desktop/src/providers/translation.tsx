@@ -12,6 +12,9 @@ export interface TranslationSessionValue {
 	setFileName: Dispatch<SetStateAction<string>>
 	target: string
 	setTarget: Dispatch<SetStateAction<string>>
+	/** Source language for the built-in engine; `auto` detects it from the script. */
+	sourceLanguage: string
+	setSourceLanguage: Dispatch<SetStateAction<string>>
 	viewMode: TranslationViewMode
 	setViewMode: Dispatch<SetStateAction<TranslationViewMode>>
 }
@@ -27,11 +30,25 @@ export function TranslationSessionProvider({ children }: { children: ReactNode }
 	const [output, setOutput] = useLocalStorage('translation_output', '')
 	const [fileName, setFileName] = useLocalStorage('translation_file_name', '')
 	const [target, setTarget] = useLocalStorage('prefs_translation_target', 'zh')
+	const [sourceLanguage, setSourceLanguage] = useLocalStorage('prefs_translation_source', 'auto')
 	const [viewMode, setViewMode] = useLocalStorage<TranslationViewMode>('prefs_translation_view_mode', 'side-by-side')
 
 	return (
 		<TranslationSessionContext.Provider
-			value={{ source, setSource, output, setOutput, fileName, setFileName, target, setTarget, viewMode, setViewMode }}>
+			value={{
+				source,
+				setSource,
+				output,
+				setOutput,
+				fileName,
+				setFileName,
+				target,
+				setTarget,
+				sourceLanguage,
+				setSourceLanguage,
+				viewMode,
+				setViewMode,
+			}}>
 			{children}
 		</TranslationSessionContext.Provider>
 	)

@@ -155,18 +155,68 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
             .resizable(true)
             .focused(true)
             .shadow(true)
-            .visible(true);
+            // Hidden until the page is ready, then shown by `show_main_window`.
+            // Painting while the window is still being created / centred /
+            // restored from the saved state leaves WebView2 with the wrong
+            // client bounds, so the UI only fills part of the window until the
+            // user resizes it by hand.
+            .visible(false)
+            .on_page_load(|window, payload| {
+                if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
+                    show_main_window(&window);
+                }
+            });
         // Frameless window on Windows: the app draws its own title bar (drag
         // region + custom window controls) so the logo/icon can live in it.
         #[cfg(target_os = "windows")]
         {
             window_builder = window_builder.decorations(false);
         }
-        let result = window_builder.build();
-        if let Err(error) = result {
-            tracing::error!("{:?}", error);
+        match window_builder.build() {
+            Ok(window) => {
+                // Safety net: the window must never stay invisible because the
+                // page load event did not arrive (e.g. a wrong dev server URL).
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                    if !window.is_visible().unwrap_or(true) {
+                        tracing::warn!("main window was still hidden, showing it anyway");
+                        show_main_window(&window);
+                    }
+                });
+            }
+            Err(error) => tracing::error!("{:?}", error),
         }
         crate::dictation_indicator::initialize(app.handle());
     }
     Ok(())
+}
+
+/// Shows the main window and re-synchronises the webview with the client area.
+///
+/// Showing is what makes the app appear (the window is created hidden, see
+/// above). The one-pixel size round-trip afterwards sends two `WM_SIZE`
+/// messages, which is what makes WebView2 adopt the real client rect instead of
+/// the size it was created with — without it the page stays laid out for a stale
+/// viewport until the user drags the window border.
+fn show_main_window(window: &tauri::WebviewWindow) {
+    let _ = window.show().log_error();
+    let _ = window.set_focus().log_error();
+
+    #[cfg(target_os = "windows")]
+    {
+        let window = window.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(60));
+            // `set_size` restores a maximised window, so leave that case alone.
+            if window.is_maximized().unwrap_or(false) {
+                return;
+            }
+            if let Ok(size) = window.inner_size() {
+                let _ = window
+                    .set_size(tauri::PhysicalSize::new(size.width + 1, size.height + 1))
+                    .log_error();
+                let _ = window.set_size(tauri::PhysicalSize::new(size.width, size.height)).log_error();
+            }
+        });
+    }
 }

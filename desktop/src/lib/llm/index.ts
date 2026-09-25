@@ -7,7 +7,12 @@ export interface Llm {
 }
 
 export interface LlmConfig {
-	platform: 'ollama' | 'claude' | 'openai'
+	/**
+	 * `builtin` is the app's own translation engine (a dedicated MT model that
+	 * runs in-process); the other three are external services the user points
+	 * the app at. Summarisation always uses one of the external ones.
+	 */
+	platform: 'ollama' | 'claude' | 'openai' | 'builtin'
 	enabled: boolean
 	prompt: string
 

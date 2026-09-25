@@ -1,5 +1,7 @@
 import { ensureEngineRunning, isLocalUrl, probeEndpoint } from './local-engine'
 import { Claude, type Llm, type LlmConfig, Ollama, OpenAICompatible } from './llm'
+import { getNmtStatus, installNmtModel, listenNmtProgress, nmtTranslate, NMT_MODEL_LABEL } from './nmt'
+import { m } from '~/paraglide/messages.js'
 import type { Segment } from './transcript'
 
 export interface TranslateLanguage {
@@ -35,6 +37,11 @@ function makeLlm(config: LlmConfig): Llm {
 	return new Claude(config)
 }
 
+/** True when the configured engine is the app's own built-in MT model. */
+export function isBuiltinEngine(config: LlmConfig | null | undefined): boolean {
+	return config?.platform === 'builtin'
+}
+
 /** True when the configured OpenAI-compatible endpoint runs on this machine. */
 export function isLocalEndpoint(config: LlmConfig | null | undefined): boolean {
 	return config?.platform === 'openai' && isLocalUrl(config.openaiBaseUrl)
@@ -43,9 +50,52 @@ export function isLocalEndpoint(config: LlmConfig | null | undefined): boolean {
 /** Short human-readable description of the active translation engine. */
 export function translationEngineLabel(config: LlmConfig | null | undefined): string {
 	if (!config) return '—'
+	if (config.platform === 'builtin') return `${NMT_MODEL_LABEL}`
 	if (config.platform === 'ollama') return `Ollama · ${config.model || 'llama3'}`
 	if (config.platform === 'claude') return `Claude · ${config.model || 'claude'}`
 	return `${isLocalEndpoint(config) ? 'Local' : 'OpenAI-compatible'} · ${config.model || 'gpt-4o-mini'}`
+}
+
+/**
+ * Translates lines with the built-in model and forwards its per-line progress.
+ *
+ * The engine keeps the line count, so callers can zip the result straight back
+ * onto subtitles or transcript segments.
+ */
+async function builtinTranslate(
+	lines: string[],
+	source: string,
+	target: string,
+	onProgress?: (done: number, total: number) => void,
+): Promise<string[]> {
+	const total = lines.length
+	if (!total) return []
+	onProgress?.(0, total)
+	const unlisten = onProgress ? await listenNmtProgress(onProgress) : null
+	try {
+		const translated = await nmtTranslate(lines, source, target)
+		onProgress?.(total, total)
+		return translated
+	} finally {
+		unlisten?.()
+	}
+}
+
+/**
+ * Makes sure the configured engine can translate, downloading the built-in
+ * model on first use so the user never has to hunt through the settings.
+ */
+export async function ensureTranslationEngine(
+	config: LlmConfig,
+	withProgress?: <T>(message: string, run: () => Promise<T>) => Promise<T>,
+): Promise<void> {
+	if (config.platform !== 'builtin') {
+		await ensureEngineRunning(config)
+		return
+	}
+	if ((await getNmtStatus()).installed) return
+	if (!withProgress) throw new Error(m.needDownloadTranslateModel())
+	await withProgress(m.downloadingTranslationModel(), () => installNmtModel())
 }
 
 function numberedPrompt(target: string, lines: string): string {
@@ -58,7 +108,6 @@ export function translationEndpoint(config: LlmConfig): string | null {
 	if (config.platform === 'openai') return (config.openaiBaseUrl || '').replace(/\/+$/, '') || null
 	return null
 }
-
 /**
  * Is something actually listening on the configured endpoint?
  *
@@ -68,6 +117,11 @@ export function translationEndpoint(config: LlmConfig): string | null {
  * server answered, so those count as reachable.
  */
 export async function probeTranslationEngine(config: LlmConfig, timeoutMs = 2500): Promise<{ ok: boolean; endpoint: string | null }> {
+	// The built-in engine has no endpoint to probe: what matters is whether the
+	// model has been downloaded yet.
+	if (config.platform === 'builtin') {
+		return { ok: (await getNmtStatus()).installed, endpoint: null }
+	}
 	const endpoint = translationEndpoint(config)
 	if (!endpoint) return { ok: true, endpoint: null }
 	return { ok: await probeEndpoint(endpoint, config.openaiApiKey, timeoutMs), endpoint }
@@ -81,7 +135,11 @@ async function ensureTranslationEngineReady(config: LlmConfig) {
 }
 
 /** Translates a raw text blob (used by the translation page). */
-export async function translateText(text: string, targetCode: string, config: LlmConfig): Promise<string> {
+export async function translateText(text: string, targetCode: string, config: LlmConfig, sourceCode = 'auto'): Promise<string> {
+	if (config.platform === 'builtin') {
+		const lines = text.split('\n')
+		return (await builtinTranslate(lines, sourceCode, targetCode)).join('\n').trim()
+	}
 	await ensureTranslationEngineReady(config)
 	const llm = makeLlm(config)
 	const answer = await llm.ask(
@@ -102,11 +160,17 @@ export async function translateLongText(
 	config: LlmConfig,
 	onProgress?: (done: number, total: number) => void,
 	chunkSize = 25,
+	sourceCode = 'auto',
 ): Promise<string> {
+	const source = text.split('\n')
+	if (config.platform === 'builtin') {
+		// The engine works line by line and keeps the line count, so subtitle
+		// timings and blank lines survive untouched.
+		return (await builtinTranslate(source, sourceCode, targetCode, onProgress)).join('\n')
+	}
 	await ensureTranslationEngineReady(config)
 	const llm = makeLlm(config)
 	const target = languageName(targetCode)
-	const source = text.split('\n')
 	const pending = source.map((line, index) => ({ line, index })).filter((entry) => entry.line.trim().length > 0)
 	if (!pending.length) return ''
 
@@ -145,7 +209,17 @@ export async function translateSegments(
 	config: LlmConfig,
 	onChunk?: (done: number, total: number) => void,
 	chunkSize = 25,
+	sourceCode = 'auto',
 ): Promise<Segment[]> {
+	if (config.platform === 'builtin') {
+		const translated = await builtinTranslate(
+			segments.map((segment) => segment.text),
+			sourceCode,
+			targetCode,
+			onChunk,
+		)
+		return segments.map((segment, index) => ({ ...segment, text: translated[index] ?? '' }))
+	}
 	await ensureTranslationEngineReady(config)
 	const llm = makeLlm(config)
 	const target = languageName(targetCode)

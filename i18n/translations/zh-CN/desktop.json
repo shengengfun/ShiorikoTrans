@@ -523,5 +523,17 @@
 	"summaryPreset": "提示词预设",
 	"summarySettings": "总结设置",
 	"useBuiltinLocalModel": "使用内置本地模型",
-	"useModel": "使用"
+	"useModel": "使用",
+	"engineBuiltin": "内置翻译模型（离线，无需配置）",
+	"engineOpenAICompatible": "OpenAI 兼容端点（高级）",
+	"translateBuiltinTitle": "内置翻译模型",
+	"translateBuiltinHint": "由应用自己运行的翻译专用模型，完全离线、无需 API Key，翻译时直接调用。",
+	"translateBuiltinReady": "模型已就绪",
+	"translateBuiltinMissing": "尚未下载模型",
+	"translateBuiltinDownload": "下载模型",
+	"translateBuiltinSizeHint": "首次使用需下载约 {size} MB 的模型文件，之后可完全离线使用。",
+	"downloadingTranslationModel": "正在下载翻译模型",
+	"needDownloadTranslateModel": "请先在 设置 → 翻译 → 引擎 中下载内置翻译模型。",
+	"translateSourceLanguage": "源语言",
+	"translateSourceAuto": "自动检测"
 }

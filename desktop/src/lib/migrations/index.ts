@@ -1,4 +1,5 @@
 import { migrateLegacyLocale } from './migrate-legacy-locale'
+import { migrateLegacyTranslationEngine } from './migrate-legacy-translation'
 
 /**
  * Local storage migration versioning
@@ -11,7 +12,10 @@ import { migrateLegacyLocale } from './migrate-legacy-locale'
  * The stored version advances only after a migration succeeds, so keep each
  * migration idempotent to make retries safe.
  */
-const migrations = [{ version: 1, run: migrateLegacyLocale }]
+const migrations = [
+	{ version: 1, run: migrateLegacyLocale },
+	{ version: 2, run: migrateLegacyTranslationEngine },
+]
 const MIGRATION_VERSION_KEY = 'shiorikotrans:migration-version'
 
 function readMigrationVersion() {

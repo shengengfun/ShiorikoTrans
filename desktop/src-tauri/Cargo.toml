@@ -1,6 +1,6 @@
 [package]
 name = "shiorikotrans"
-version = "1.0.11"
+version = "1.0.12"
 description = "ShiorikoTrans - Transcribe audio and video on your device"
 authors = ["ShiorikoTrans Team"]
 license = "MIT"
@@ -37,6 +37,25 @@ tauri-plugin-opener = "2"
 
 serde_json = { workspace = true }
 eyre = { workspace = true }
+
+# Built-in neural machine translation: a dedicated MT model (NLLB-200 int8
+# ONNX) plus its HuggingFace tokenizer, both run in-process. `load-dynamic`
+# means ort uses the `onnxruntime.dll` we already bundle for the sona sidecar
+# instead of linking its own copy, and `api-24` matches that DLL's version.
+ort = { version = "2.0.0-rc.13", default-features = false, features = [
+	"std",
+	"ndarray",
+	"load-dynamic",
+	"api-24",
+] }
+ndarray = "0.17"
+# `default-features = false` skips the optional `onig`/`esaxx` C dependencies:
+# they are only needed to *train* tokenizers, while we only load and run an
+# existing `tokenizer.json`. `fancy-regex` is the pure-Rust regex engine the
+# crate requires for its normalizers.
+tokenizers = { version = "0.21", default-features = false, features = [
+	"fancy-regex",
+] }
 
 tokio = { version = "1.49.0", features = [
 	"net",

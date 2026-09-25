@@ -11,6 +11,7 @@ import { m } from '~/paraglide/messages.js'
 import { LlmConfig, defaultOpenAIConfig } from '~/lib/llm'
 import { DEFAULT_SUMMARY_CHUNK_CHARS } from '~/lib/summarize'
 import { DEFAULT_LOCAL_BASE_URL, DEFAULT_LOCAL_MODEL } from '~/lib/translate-models'
+import { NMT_MODEL_ID } from '~/lib/nmt'
 import { message } from '@tauri-apps/plugin-dialog'
 import { convertFileSrc, invoke } from '@tauri-apps/api/core'
 import type { ModelMetadata } from '~/lib/model'
@@ -175,15 +176,20 @@ const systemIsDark = window.matchMedia && window.matchMedia('(prefers-color-sche
 const defaultDisplayLanguage = 'en-US'
 
 /**
- * Translation defaults to a **local** OpenAI-compatible server (llama.cpp
- * `llama-server`, LM Studio, Jan, vLLM…) instead of Ollama, so the built-in
- * path is offline and uses a small model.
+ * Translation defaults to the app's own engine: a dedicated MT model
+ * (NLLB-200-distilled-600M) that is downloaded once and then runs in-process,
+ * fully offline. No Ollama, no local server to start, no API key. A hosted
+ * provider (Ollama / Claude / any OpenAI-compatible endpoint) can still be
+ * selected in the settings for people who prefer one.
  */
 function defaultTranslateLlmConfig(): LlmConfig {
 	return {
 		...defaultOpenAIConfig(),
-		enabled: false,
-		model: DEFAULT_LOCAL_MODEL,
+		platform: 'builtin',
+		// On by default: the built-in engine is offline and free, so there is no
+		// reason to make the user flip a switch before translating.
+		enabled: true,
+		model: NMT_MODEL_ID,
 		openaiBaseUrl: DEFAULT_LOCAL_BASE_URL,
 		openaiApiKey: '',
 		temperature: 0.2,
@@ -227,19 +233,19 @@ const defaultOptions = {
 	focusOnFinish: true,
 	modelPath: null,
 	modelOptions: {
-			init_prompt: '',
-			verbose: false,
-			lang: 'en',
-			n_threads: 4,
-			temperature: 0.4,
-			translate: 'none',
-			max_text_ctx: undefined,
-			word_timestamps: false,
-			max_sentence_len: undefined,
-			sampling_strategy: 'beam search' as 'greedy' | 'beam search',
-			best_of: 5,
-			beam_size: 5,
-		},
+		init_prompt: '',
+		verbose: false,
+		lang: 'en',
+		n_threads: 4,
+		temperature: 0.4,
+		translate: 'none',
+		max_text_ctx: undefined,
+		word_timestamps: false,
+		max_sentence_len: undefined,
+		sampling_strategy: 'beam search' as 'greedy' | 'beam search',
+		best_of: 5,
+		beam_size: 5,
+	},
 	ffmpegOptions: {
 		normalize_loudness: false,
 		custom_command: null,

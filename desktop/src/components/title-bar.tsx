@@ -78,13 +78,9 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 		}
 	}, [win])
 
-	function onWindowDoubleClick(event: React.MouseEvent) {
-		if (!isWindows || !win) return
-		const target = event.target as HTMLElement
-		if (target.hasAttribute('data-tauri-drag-region')) {
-			isMaximized ? win.unmaximize() : win.maximize()
-		}
-	}
+	// Double-clicking the header is handled natively by Tauri's drag-region
+	// script (`data-tauri-drag-region` + `plugin:window|internal_toggle_maximize`);
+	// doing it in JS as well would toggle the window twice and cancel itself out.
 
 	// Load available transcription models for the quick-switcher in the title bar
 	const { models } = useTranscriptionModels(prefs.modelPath)
@@ -137,8 +133,7 @@ export default function TitleBar({ onOpenSettings }: TitleBarProps) {
 
 	return (
 		<header
-			data-tauri-drag-region
-			onDoubleClick={onWindowDoubleClick}
+			data-tauri-drag-region="deep"
 			className="flex h-14 shrink-0 select-none items-center gap-1.5 border-b border-border/60 bg-card/80 px-2.5 backdrop-blur">
 			<img src="/logo.jpg" alt="" draggable={false} className="h-8 w-8 rounded-full object-cover ring-1 ring-border/60" />
 			<span className="me-1 text-[15px] font-semibold tracking-tight">{m.appTitle()}</span>

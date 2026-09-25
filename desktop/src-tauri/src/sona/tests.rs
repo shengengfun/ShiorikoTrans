@@ -22,7 +22,7 @@ async fn decodes_events_across_arbitrary_chunk_boundaries() {
             .await;
 
         assert_eq!(events.len(), 3, "chunk size {chunk_size}");
-        assert!(matches!(events[0], Ok(SonaEvent::Progress { progress: 25 })));
+        assert!(matches!(events[0], Ok(SonaEvent::Progress { progress: 25.0 })));
         assert!(matches!(events[1], Ok(SonaEvent::Segment { ref text, .. }) if text == "hello"));
         assert!(matches!(events[2], Ok(SonaEvent::Result { ref text }) if text == "hello"));
     }

@@ -15,8 +15,10 @@ import { m } from '~/paraglide/messages.js'
 import { usePreferenceProvider } from '~/providers/preference'
 import { useTranslationSession } from '~/providers/translation'
 import { setActivity } from '~/lib/activity'
-import { TRANSLATE_LANGUAGES, isLocalEndpoint, languageName, translateLongText } from '~/lib/translate'
+import { TRANSLATE_LANGUAGES, ensureTranslationEngine, isBuiltinEngine, languageName, translateLongText, translationEngineLabel } from '~/lib/translate'
 import { TRANSLATE_MODELS, isTranslateModelInstalled } from '~/lib/translate-models'
+import { NMT_MODEL_LABEL, NMT_MODEL_INFO, getNmtStatus, installNmtModel, type NmtStatus } from '~/lib/nmt'
+import { useModelDownload } from '~/lib/model-download'
 
 const TEXT_EXTENSIONS = ['txt', 'srt', 'vtt', 'md', 'json', 'csv', 'html']
 
@@ -30,16 +32,20 @@ export default function TranslatePage() {
 	const preference = usePreferenceProvider()
 	const location = useLocation()
 	const navigate = useNavigate()
-	const { source, setSource, output, setOutput, fileName, setFileName, target, setTarget, viewMode, setViewMode } = useTranslationSession()
+	const { source, setSource, output, setOutput, fileName, setFileName, target, setTarget, sourceLanguage, setSourceLanguage, viewMode, setViewMode } =
+		useTranslationSession()
+	const download = useModelDownload()
 	const [busy, setBusy] = useState(false)
 	const [progress, setProgress] = useState(0)
 	const [installedModels, setInstalledModels] = useState<string[]>([])
+	const [nmtStatus, setNmtStatus] = useState<NmtStatus | null>(null)
 	const sourceRef = useRef<HTMLTextAreaElement>(null)
 	const outputRef = useRef<HTMLTextAreaElement>(null)
 	const syncingRef = useRef(false)
 
 	const config = preference.translationLlmConfig
 	const llmEnabled = !!config?.enabled
+	const builtin = isBuiltinEngine(config)
 
 	// 从“转录”页跳转而来时，预填已转录的文本
 	useEffect(() => {
@@ -53,6 +59,7 @@ export default function TranslatePage() {
 
 	// 只有已下载的本地模型才会出现在这个下拉里（外加当前配置的模型）
 	useEffect(() => {
+		if (builtin) return
 		let cancelled = false
 		Promise.all(TRANSLATE_MODELS.map(async (entry) => ((await isTranslateModelInstalled(entry)) ? entry.filename : null))).then((names) => {
 			if (cancelled) return
@@ -62,7 +69,32 @@ export default function TranslatePage() {
 		return () => {
 			cancelled = true
 		}
-	}, [config?.model])
+	}, [builtin, config?.model])
+
+	// The built-in engine runs one fixed model, so all the UI shows is whether it
+	// has been downloaded yet — and a button that does it in one click.
+	useEffect(() => {
+		if (!builtin) return
+		let cancelled = false
+		getNmtStatus()
+			.then((value) => {
+				if (!cancelled) setNmtStatus(value)
+			})
+			.catch(() => { })
+		return () => {
+			cancelled = true
+		}
+	}, [builtin])
+
+	async function fetchModel() {
+		try {
+			setNmtStatus(await download.withProgress(m.downloadingTranslationModel(), () => installNmtModel()))
+			toast.success(m.downloadComplete())
+		} catch (error) {
+			console.error('failed to download the translation model:', error)
+			toast.error(String(error))
+		}
+	}
 
 	function syncScroll(from: HTMLTextAreaElement, to: HTMLTextAreaElement | null) {
 		if (!to || syncingRef.current) return
@@ -95,6 +127,8 @@ export default function TranslatePage() {
 		setProgress(0)
 		setActivity({ phase: 'translating', progress: 0 })
 		try {
+			// First use downloads the built-in model, with the shared progress toast.
+			await ensureTranslationEngine(config, download.withProgress)
 			const result = await translateLongText(
 				source,
 				target,
@@ -105,6 +139,7 @@ export default function TranslatePage() {
 					setActivity({ phase: 'translating', progress: percent })
 				},
 				preference.translateChunkSize,
+				sourceLanguage,
 			)
 			setOutput(result)
 			toast.success(m.translationDone())
@@ -133,6 +168,22 @@ export default function TranslatePage() {
 			<div className="mx-auto flex h-full w-full min-w-0 max-w-6xl flex-col gap-4">
 				<div className="app-panel flex flex-wrap items-end gap-3">
 					<div className="space-y-2">
+						<Label>{m.translateSourceLanguage()}</Label>
+						<Select value={sourceLanguage} onValueChange={setSourceLanguage}>
+							<SelectTrigger className="w-44">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="auto">{m.translateSourceAuto()}</SelectItem>
+								{TRANSLATE_LANGUAGES.map((lang) => (
+									<SelectItem key={lang.code} value={lang.code}>
+										{lang.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="space-y-2">
 						<Label>{m.defaultTarget()}</Label>
 						<Select value={target} onValueChange={setTarget}>
 							<SelectTrigger className="w-44">
@@ -147,34 +198,58 @@ export default function TranslatePage() {
 							</SelectContent>
 						</Select>
 					</div>
-					<div className="space-y-2">
-						<Label className="flex items-center gap-1.5">
-							<Cpu className="h-3.5 w-3.5" />
-							{m.modelName()}
-						</Label>
-						<div className="flex items-center gap-1.5">
-							<Select value={config?.model ?? ''} onValueChange={(model) => preference.setTranslationLlmConfig({ ...config, model })}>
-								<SelectTrigger className="w-64">
-									<SelectValue placeholder={m.modelName()} />
-								</SelectTrigger>
-								<SelectContent>
-									{installedModels.map((name) => (
-										<SelectItem key={name} value={name}>
-											{name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<Button variant="outline" size="icon" onClick={() => navigate('/settings?scrollTo=translation')}>
-										<Settings2 className="h-4 w-4" />
+					{builtin ? (
+						<div className="space-y-2">
+							<Label className="flex items-center gap-1.5">
+								<Cpu className="h-3.5 w-3.5" />
+								{m.modelName()}
+							</Label>
+							<div className="flex items-center gap-2">
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span className="cursor-default rounded-lg border border-border/70 bg-muted/45 px-2.5 py-2 text-sm">{NMT_MODEL_LABEL}</span>
+									</TooltipTrigger>
+									<TooltipContent>{NMT_MODEL_INFO}</TooltipContent>
+								</Tooltip>
+								{nmtStatus && !nmtStatus.installed ? (
+									<Button variant="outline" onClick={fetchModel}>
+										{m.translateBuiltinDownload()}
 									</Button>
-								</TooltipTrigger>
-								<TooltipContent>{m.translationEngine()}</TooltipContent>
-							</Tooltip>
+								) : nmtStatus ? (
+									<span className="text-xs text-primary">{m.translateBuiltinReady()}</span>
+								) : null}
+							</div>
 						</div>
-					</div>
+					) : (
+						<div className="space-y-2">
+							<Label className="flex items-center gap-1.5">
+								<Cpu className="h-3.5 w-3.5" />
+								{m.modelName()}
+							</Label>
+							<div className="flex items-center gap-1.5">
+								<Select value={config?.model ?? ''} onValueChange={(model) => preference.setTranslationLlmConfig({ ...config, model })}>
+									<SelectTrigger className="w-64">
+										<SelectValue placeholder={m.modelName()} />
+									</SelectTrigger>
+									<SelectContent>
+										{installedModels.map((name) => (
+											<SelectItem key={name} value={name}>
+												{name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button variant="outline" size="icon" onClick={() => navigate('/settings?scrollTo=translation')}>
+											<Settings2 className="h-4 w-4" />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent>{m.translationEngine()}</TooltipContent>
+								</Tooltip>
+							</div>
+						</div>
+					)}
 					<Button variant="outline" onClick={pickFile}>
 						{m.chooseTextFile()}
 					</Button>
@@ -202,8 +277,8 @@ export default function TranslatePage() {
 				</div>
 
 				<div className="flex flex-wrap items-center gap-2 px-1 text-xs text-muted-foreground">
-					<span className={isLocalEndpoint(config) ? 'text-primary' : undefined}>
-						{m.currentEngine()}: {isLocalEndpoint(config) ? m.engineLocal() : config?.platform === 'ollama' ? 'Ollama' : config?.platform === 'claude' ? 'Claude' : 'OpenAI'}
+					<span className={builtin ? 'text-primary' : undefined}>
+						{m.currentEngine()}: {translationEngineLabel(config)}
 					</span>
 					<span>·</span>
 					<span>{languageName(target)}</span>

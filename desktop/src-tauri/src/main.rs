@@ -12,6 +12,7 @@ mod error;
 mod ffmpeg;
 mod llama;
 mod logging;
+mod nmt;
 mod setup;
 mod sona;
 mod transcript;
@@ -64,7 +65,8 @@ async fn main() -> Result<()> {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        .manage(llama::LlamaServerState::default());
+        .manage(llama::LlamaServerState::default())
+        .manage(nmt::NmtState::default());
 
     if analytics::is_aptabase_configured() {
         let options = tauri_plugin_aptabase::InitOptions {
@@ -116,6 +118,10 @@ async fn main() -> Result<()> {
             llama::install_llama_server,
             llama::start_llama_server,
             llama::stop_llama_server,
+            nmt::get_nmt_status,
+            nmt::install_nmt_model,
+            nmt::nmt_translate,
+            nmt::cancel_nmt,
             cmd::app::get_logs_folder,
             cmd::app::show_log_path,
             cmd::app::show_temp_path,
