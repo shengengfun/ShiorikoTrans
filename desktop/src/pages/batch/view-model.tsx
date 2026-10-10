@@ -13,7 +13,7 @@ import * as webview from '@tauri-apps/api/webviewWindow'
 import * as dialog from '@tauri-apps/plugin-dialog'
 import { prepareTranscribeOptions, allowsChunking } from '~/lib/transcribe-options'
 import { getModelPipelineFromPath } from '~/lib/model-pipeline'
-import { planWorkers, type WorkerPlan } from '~/lib/hardware'
+import { planWorkers } from '~/lib/hardware'
 import * as config from '~/lib/config'
 import { setActivity } from '~/lib/activity'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
@@ -199,27 +199,28 @@ export function viewModel() {
 		})
 
 		// How many files may run at once. The hardware decides unless the user
-		// picked a fixed worker count.
-		let plan: WorkerPlan
+		// picked a fixed worker count; detection is best-effort, so a failure
+		// just means "run one file at a time".
+		let workers = 1
 		try {
-			plan = await planWorkers({
+			const plan = await planWorkers({
 				modelPath,
 				forceCpu: preference.forceCpu,
 				highPerformance: preference.highPerformanceMode,
 				overrideWorkers: preference.parallelWorkers,
 			})
+			workers = plan.workers
 		} catch (error) {
 			console.error('failed to size the worker pool:', error)
-			plan = { workers: 1, profile: null as never, hardware: null as never }
 		}
-		const parallel = Math.max(1, Math.min(plan.workers, files.length))
+		const parallel = Math.max(1, Math.min(workers, files.length))
 		setConcurrency(parallel)
 
 		const loadResult = await invoke<string>('load_model', {
 			modelPath,
 			gpuDevice: preference.gpuDevice,
 			unloadTimeoutMinutes: preference.unloadTimeoutMinutes,
-			maxWorkers: plan.workers,
+			maxWorkers: workers,
 			highPerformance: preference.highPerformanceMode,
 		})
 		if (loadResult === 'gpu_fallback') {
