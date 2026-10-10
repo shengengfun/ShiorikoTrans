@@ -1,29 +1,35 @@
-use super::{ReadySignal, SonaProcess, SONA_PID};
+use super::{register_process, ReadySignal, SonaProcess};
 use eyre::{bail, Context, ContextCompat, Result};
 use std::io::BufRead;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
-/// Runs the inference sidecar at below-normal priority.
+/// Adjusts the inference sidecar's process priority.
 ///
 /// The engine saturates every core while transcribing, which used to starve the
 /// webview process and make the window controls (minimise / maximise / close are
 /// drawn by the app itself) feel frozen. Dropping the sidecar one priority class
-/// keeps the UI snappy at the cost of a few percent throughput.
+/// keeps the UI snappy at the cost of a few percent throughput, so it is only
+/// done when the user has not asked for maximum speed (high-performance mode).
 #[cfg(target_os = "windows")]
-fn lower_process_priority(pid: u32) {
+fn set_process_priority(pid: u32, below_normal: bool) {
     use windows::Win32::Foundation::CloseHandle;
     use windows::Win32::System::Threading::{
-        OpenProcess, SetPriorityClass, BELOW_NORMAL_PRIORITY_CLASS, PROCESS_SET_INFORMATION,
+        OpenProcess, SetPriorityClass, BELOW_NORMAL_PRIORITY_CLASS, NORMAL_PRIORITY_CLASS, PROCESS_SET_INFORMATION,
     };
     unsafe {
         match OpenProcess(PROCESS_SET_INFORMATION, false, pid) {
             Ok(handle) => {
-                if let Err(error) = SetPriorityClass(handle, BELOW_NORMAL_PRIORITY_CLASS) {
-                    tracing::warn!("failed to lower sona priority: {error}");
+                let class = if below_normal {
+                    BELOW_NORMAL_PRIORITY_CLASS
                 } else {
-                    tracing::debug!("sona process {} set to below-normal priority", pid);
+                    NORMAL_PRIORITY_CLASS
+                };
+                if let Err(error) = SetPriorityClass(handle, class) {
+                    tracing::warn!("failed to set sona priority: {error}");
+                } else {
+                    tracing::debug!("sona process {} set to priority class {:?}", pid, class);
                 }
                 let _ = CloseHandle(handle);
             }
@@ -32,12 +38,16 @@ fn lower_process_priority(pid: u32) {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
+fn set_process_priority(_pid: u32, _below_normal: bool) {}
+
 impl SonaProcess {
     pub fn spawn(
         binary_path: &Path,
         ffmpeg_path: Option<&Path>,
         gpu_device: Option<i32>,
         unload_timeout_minutes: u32,
+        high_performance: bool,
     ) -> Result<Self> {
         tracing::debug!("spawning sona at {}", binary_path.display());
         let unload_timeout = if unload_timeout_minutes == 0 {
@@ -94,10 +104,9 @@ impl SonaProcess {
         })?;
         // Store PID globally for synchronous cleanup during app exit
         let pid = child.id();
-        SONA_PID.store(pid, std::sync::atomic::Ordering::SeqCst);
+        register_process(pid);
         tracing::debug!("sona process spawned with PID {}", pid);
-        #[cfg(target_os = "windows")]
-        lower_process_priority(pid);
+        set_process_priority(pid, !high_performance);
         let mut stderr = child.stderr.take();
         let stdout = child.stdout.take().context("failed to get sona stdout")?;
         let mut reader = std::io::BufReader::new(stdout);
@@ -291,7 +300,7 @@ impl SonaProcess {
             let _ = self.child.wait();
         }
 
-        SONA_PID.store(0, std::sync::atomic::Ordering::SeqCst);
+        super::forget_process(pid);
     }
 }
 

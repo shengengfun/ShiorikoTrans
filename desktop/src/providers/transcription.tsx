@@ -12,6 +12,20 @@ import { hotkeyRecordingActive } from '~/providers/hotkey'
 import { usePreferenceProvider } from '~/providers/preference'
 
 /**
+ * One transcription job's progress. Parallel batch transcriptions each report
+ * under their own id; the home page runs the untagged (null) job.
+ */
+export interface ProgressEvent {
+	jobId: string | null
+	progress: number
+}
+
+export interface SegmentEvent {
+	jobId: string | null
+	segment: transcript.Segment
+}
+
+/**
  * App-wide transcription session.
  *
  * The transcription itself runs in the Rust backend, so the UI state for it
@@ -190,16 +204,21 @@ export function TranscriptionProvider({ children }: { children: ReactNode }) {
 		}
 
 		unlisteners.push(
-			listen('transcribe_progress', (event) => {
-				const value = Math.round(event.payload as number)
+			listen<ProgressEvent>('transcribe_progress', (event) => {
+				// The home page runs the untagged job; parallel batch jobs report
+				// their own ids and must not move this progress bar.
+				if (event.payload?.jobId) return
+				const value = Math.round(event.payload?.progress ?? -1)
 				if (value < 0 || value > 100) return
 				// Bail out when the percentage didn't change to avoid a re-render.
 				setProgress((prev) => (prev === value ? prev : value))
 			}),
 		)
 		unlisteners.push(
-			listen<transcript.Segment>('new_segment', (event) => {
-				pending.push(event.payload)
+			listen<SegmentEvent>('new_segment', (event) => {
+				if (event.payload?.jobId) return
+				if (!event.payload?.segment) return
+				pending.push(event.payload.segment)
 				scheduleFlush()
 			}),
 		)

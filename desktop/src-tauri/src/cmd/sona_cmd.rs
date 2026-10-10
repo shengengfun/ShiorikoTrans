@@ -247,6 +247,8 @@ pub async fn load_model(
     model_path: String,
     gpu_device: Option<i32>,
     unload_timeout_minutes: u32,
+    max_workers: Option<usize>,
+    high_performance: Option<bool>,
 ) -> Result<String> {
     // B3: Validate model file before attempting load
     let file_size = validate_model_file(&model_path).map_err(|e| {
@@ -261,79 +263,83 @@ pub async fn load_model(
         return Err(eyre::eyre!("{hint}"));
     }
 
+    let max_workers = max_workers.unwrap_or(1).clamp(1, crate::hardware::MAX_WORKERS);
+    let high_performance = high_performance.unwrap_or(false);
+
     let sona_state: State<'_, Mutex<SonaState>> = app_handle.state();
     let mut state_guard = sona_state.lock().await;
 
-    let process_is_alive = state_guard.process.as_mut().is_some_and(crate::sona::SonaProcess::is_alive);
-    if !process_is_alive {
-        if state_guard.process.is_some() {
+    state_guard
+        .pool
+        .configure(resolve_sona_binary(&app_handle)?, resolve_ffmpeg_path(&app_handle));
+    state_guard
+        .pool
+        .set_limits(max_workers, high_performance, unload_timeout_minutes);
+    state_guard.unload_timeout_minutes = unload_timeout_minutes;
+    tracing::debug!(
+        "transcription pool sized to {} worker(s) (high performance: {}, degraded: {})",
+        state_guard.pool.max_workers(),
+        high_performance,
+        state_guard.pool.is_degraded()
+    );
+
+    if !state_guard.pool.primary_alive() {
+        if state_guard.pool.worker_count() > 0 {
             tracing::warn!("cached sona process is no longer running; restarting it");
         }
-        state_guard.process = None;
-        state_guard.loaded_model_path = None;
-        state_guard.loaded_gpu_device = None;
-    }
-
-    // Restart sona if the unload timeout changed so the new value takes effect.
-    if state_guard
-        .process
-        .as_ref()
+        state_guard.pool.reset();
+    } else if state_guard
+        .pool
+        .primary()
         .is_some_and(|process| process.unload_timeout_minutes() != unload_timeout_minutes)
     {
+        // Restart sona if the unload timeout changed so the new value takes effect.
         tracing::debug!(unload_timeout_minutes, "restarting sona to apply unload timeout");
-        // Dropping SonaProcess kills and waits for its child process via its Drop implementation.
-        state_guard.process = None;
-        state_guard.loaded_model_path = None;
-        state_guard.loaded_gpu_device = None;
+        state_guard.pool.reset();
     }
 
     // Check if model already loaded with same gpu_device. The sona server
     // unloads the model on its own once its inactivity timeout elapses, so the
-    // local `loaded_model_path` cache can go stale: the model may already be
-    // gone on the server even though we think it is loaded. Verify with the
-    // server (`GET /ready` is 200 only while a model is loaded) before
-    // trusting the cache; if the model was unloaded, fall through to the real
-    // load path below.
-    if let Some(ref loaded_path) = state_guard.loaded_model_path {
-        if *loaded_path == model_path && state_guard.loaded_gpu_device == gpu_device {
-            let still_loaded = match state_guard.process.as_mut() {
-                Some(process) => {
-                    if !process.is_alive() {
-                        false
-                    } else {
-                        process.model_loaded().await.unwrap_or(false)
-                    }
-                }
-                None => false,
-            };
-            if still_loaded {
-                tracing::debug!("model already loaded, skipping");
-                state_guard.unload_timeout_minutes = unload_timeout_minutes;
-                return Ok(model_path);
-            }
-            tracing::warn!("model cache says loaded but sona reports no model; reloading");
+    // pool's loaded-model record can go stale: the model may already be gone on
+    // the server even though we think it is loaded. Verify with the server
+    // (`GET /ready` is 200 only while a model is loaded) before trusting the
+    // cache; if the model was unloaded, fall through to the real load path.
+    let cached_gpu_fallback = state_guard
+        .pool
+        .loaded()
+        .filter(|loaded| loaded.path == model_path && loaded.gpu_device == gpu_device)
+        .map(|loaded| loaded.no_gpu);
+    if let Some(gpu_fallback) = cached_gpu_fallback {
+        let still_loaded = match state_guard.pool.primary() {
+            Some(process) => process.model_loaded().await.unwrap_or(false),
+            None => false,
+        };
+        if still_loaded {
+            tracing::debug!("model already loaded, skipping");
+            return Ok(if gpu_fallback {
+                "gpu_fallback".to_string()
+            } else {
+                model_path
+            });
         }
+        tracing::warn!("model cache says loaded but sona reports no model; reloading");
     }
 
-    let spawn_sona = || -> Result<crate::sona::SonaProcess> {
-        let binary_path = resolve_sona_binary(&app_handle)?;
-        let ffmpeg_path = resolve_ffmpeg_path(&app_handle);
-        crate::sona::SonaProcess::spawn(&binary_path, ffmpeg_path.as_deref(), gpu_device, unload_timeout_minutes)
+    let spawn_sona = |state: &mut SonaState| -> Result<()> {
+        state.pool.reset();
+        state.pool.ensure_primary(gpu_device, unload_timeout_minutes)
     };
 
     // Spawn sona if not running
-    if state_guard.process.is_none() {
-        match spawn_sona() {
-            Ok(process) => state_guard.process = Some(process),
-            Err(e) => {
-                let error_msg = format!("{:#}", e);
-                crate::analytics::track_event_handle_with_props(
-                    &app_handle,
-                    crate::analytics::events::SONA_SPAWN_FAILED,
-                    Some(serde_json::json!({"error_message": error_msg})),
-                );
-                return Err(e);
-            }
+    if state_guard.pool.worker_count() == 0 {
+        if let Err(e) = spawn_sona(&mut state_guard) {
+            let error_msg = format!("{:#}", e);
+            crate::analytics::track_event_handle_with_props(
+                &app_handle,
+                crate::analytics::events::SONA_SPAWN_FAILED,
+                Some(serde_json::json!({"error_message": error_msg})),
+            );
+            return Err(e);
         }
     }
 
@@ -367,14 +373,32 @@ pub async fn load_model(
 
     // Load model via HTTP
     let load_result = if has_gpu {
-        let sona = state_guard.process.as_mut().unwrap();
-        sona.load_model(&model_path, gpu_device, false).await
+        let id = state_guard.pool.primary_id().context("primary sona worker missing")?;
+        state_guard
+            .pool
+            .load_into(
+                id,
+                &crate::sona::LoadedModel {
+                    path: model_path.clone(),
+                    gpu_device,
+                    no_gpu: false,
+                },
+            )
+            .await
     } else {
         Err(eyre::eyre!("no GPU devices detected, skipping GPU attempt"))
     };
 
     let gpu_fallback = match load_result {
-        Ok(()) => false,
+        Ok(()) => {
+            state_guard.pool.set_loaded(crate::sona::LoadedModel {
+                path: model_path.clone(),
+                gpu_device,
+                no_gpu: false,
+            });
+            state_guard.pool.mark_upgraded(max_workers);
+            false
+        }
         Err(e) => {
             let error_msg = format!("{:#}", e);
             // B2: Enhanced error diagnostics
@@ -405,15 +429,18 @@ pub async fn load_model(
                 ),
             );
 
-            // Kill existing process and respawn, then reload with no_gpu
-            if let Some(mut old) = state_guard.process.take() {
-                old.kill();
-            }
-            let process = spawn_sona().context("failed to respawn sona")?;
-            state_guard.process = Some(process);
+            // Kill every worker and respawn a single one, then reload with no_gpu.
+            // Parallel workers would only duplicate the (now CPU-bound) work.
+            state_guard.pool.mark_degraded();
+            spawn_sona(&mut state_guard).context("failed to respawn sona")?;
 
-            let sona = state_guard.process.as_mut().unwrap();
-            let cpu_result = sona.load_model(&model_path, gpu_device, true).await;
+            let id = state_guard.pool.primary_id().context("primary sona worker missing")?;
+            let cpu_model = crate::sona::LoadedModel {
+                path: model_path.clone(),
+                gpu_device,
+                no_gpu: true,
+            };
+            let cpu_result = state_guard.pool.load_into(id, &cpu_model).await;
             if let Err(ref cpu_err) = cpu_result {
                 let cpu_err_msg = format!("{:#}", cpu_err);
                 tracing::error!(
@@ -433,12 +460,14 @@ pub async fn load_model(
                 }
             }
             cpu_result?;
+            state_guard.pool.set_loaded(crate::sona::LoadedModel {
+                path: model_path.clone(),
+                gpu_device,
+                no_gpu: true,
+            });
             true
         }
     };
-    state_guard.loaded_model_path = Some(model_path.clone());
-    state_guard.loaded_gpu_device = gpu_device;
-    state_guard.unload_timeout_minutes = unload_timeout_minutes;
 
     if gpu_fallback {
         Ok("gpu_fallback".to_string())
@@ -454,31 +483,85 @@ pub async fn get_gpu_devices(app_handle: tauri::AppHandle) -> Result<Vec<crate::
     Ok(devices)
 }
 
+/// Detected hardware plus the runtime profile the app would apply to it.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HardwareReport {
+    pub hardware: crate::hardware::HardwareInfo,
+    pub profile: crate::hardware::PerfProfile,
+    pub model_size_bytes: u64,
+}
+
+/// Reports the machine's capabilities and the resulting transcription settings.
+///
+/// `model_path` is optional: without it the profile is computed for an unknown
+/// model size, which is only used for display.
+#[tauri::command]
+pub async fn get_hardware_info(
+    app_handle: tauri::AppHandle,
+    model_path: Option<String>,
+    force_cpu: Option<bool>,
+    high_performance: Option<bool>,
+    override_workers: Option<usize>,
+) -> Result<HardwareReport> {
+    let binary_path = resolve_sona_binary(&app_handle).ok();
+    let model_size_bytes = model_path
+        .as_deref()
+        .and_then(|path| std::fs::metadata(path).ok())
+        .map(|metadata| metadata.len())
+        .unwrap_or(0);
+
+    // Detection spawns `sona devices` and queries DXGI, so it never runs on the
+    // UI thread.
+    let hardware = tokio::task::spawn_blocking(move || crate::hardware::info(binary_path.as_deref()))
+        .await
+        .map_err(|error| eyre::eyre!("hardware detection failed: {error}"))?;
+
+    let state = app_handle.state::<Mutex<SonaState>>();
+    let gpu_fallback = {
+        let state = state.lock().await;
+        state.pool.is_degraded()
+    };
+
+    let profile = crate::hardware::recommend_profile(
+        &hardware,
+        &crate::hardware::PerfInput {
+            model_size_bytes,
+            enabled: high_performance.unwrap_or(true),
+            force_cpu: force_cpu.unwrap_or(false),
+            override_workers,
+            gpu_fallback,
+        },
+    );
+
+    Ok(HardwareReport {
+        hardware,
+        profile,
+        model_size_bytes,
+    })
+}
+
 #[tauri::command]
 pub async fn get_model_metadata(app_handle: tauri::AppHandle, model_path: String) -> Result<crate::sona::ModelMetadata> {
     let sona_state: State<'_, Mutex<SonaState>> = app_handle.state();
     let mut state = sona_state.lock().await;
-    if state.process.as_mut().is_none_or(|process| !process.is_alive()) {
-        let binary_path = resolve_sona_binary(&app_handle)?;
-        let ffmpeg_path = resolve_ffmpeg_path(&app_handle);
-        let gpu_device = state.loaded_gpu_device;
+    if !state.pool.primary_alive() {
+        let gpu_device = state.pool.loaded().and_then(|loaded| loaded.gpu_device);
         let unload_timeout_minutes = state.unload_timeout_minutes;
-        state.process = Some(crate::sona::SonaProcess::spawn(
-            &binary_path,
-            ffmpeg_path.as_deref(),
-            gpu_device,
-            unload_timeout_minutes,
-        )?);
-        state.loaded_model_path = None;
-        state.loaded_gpu_device = None;
+        state
+            .pool
+            .configure(resolve_sona_binary(&app_handle)?, resolve_ffmpeg_path(&app_handle));
+        state.pool.clear_loaded();
+        state.pool.ensure_primary(gpu_device, unload_timeout_minutes)?;
     }
-    state.process.as_ref().unwrap().model_metadata(&model_path).await
+    let process = state.pool.primary().context("sona process missing")?;
+    process.model_metadata(&model_path).await
 }
 
 #[tauri::command]
 pub async fn get_api_base_url(sona_state: State<'_, Mutex<SonaState>>) -> Result<Option<String>> {
     let state = sona_state.lock().await;
-    Ok(state.process.as_ref().map(|process| process.base_url()))
+    Ok(state.pool.primary().map(|process| process.base_url()))
 }
 
 #[tauri::command]
@@ -490,36 +573,29 @@ pub async fn start_api_server(
     let mut state_guard = sona_state.lock().await;
     // Restart sona if the unload timeout changed so the new value takes effect.
     if state_guard
-        .process
-        .as_ref()
+        .pool
+        .primary()
         .is_some_and(|process| process.unload_timeout_minutes() != unload_timeout_minutes)
     {
         tracing::debug!(unload_timeout_minutes, "restarting sona to apply unload timeout");
-        // Dropping SonaProcess kills and waits for its child process via its Drop implementation.
-        state_guard.process = None;
-        state_guard.loaded_model_path = None;
-        state_guard.loaded_gpu_device = None;
+        state_guard.pool.reset();
     }
-    if state_guard.process.is_none() {
-        let binary_path = resolve_sona_binary(&app_handle)?;
-        let ffmpeg_path = resolve_ffmpeg_path(&app_handle);
-        let gpu_device = state_guard.loaded_gpu_device;
-        let process = crate::sona::SonaProcess::spawn(&binary_path, ffmpeg_path.as_deref(), gpu_device, unload_timeout_minutes)?;
-        state_guard.process = Some(process);
-        state_guard.unload_timeout_minutes = unload_timeout_minutes;
+    state_guard.unload_timeout_minutes = unload_timeout_minutes;
+    if !state_guard.pool.primary_alive() {
+        state_guard
+            .pool
+            .configure(resolve_sona_binary(&app_handle)?, resolve_ffmpeg_path(&app_handle));
+        let gpu_device = state_guard.pool.loaded().and_then(|loaded| loaded.gpu_device);
+        state_guard.pool.ensure_primary(gpu_device, unload_timeout_minutes)?;
     }
-    let process = state_guard.process.as_ref().context("API server process missing")?;
+    let process = state_guard.pool.primary().context("API server process missing")?;
     Ok(process.base_url())
 }
 
 #[tauri::command]
 pub async fn stop_api_server(sona_state: State<'_, Mutex<SonaState>>) -> Result<bool> {
     let mut state_guard = sona_state.lock().await;
-    if let Some(mut process) = state_guard.process.take() {
-        process.kill();
-        state_guard.loaded_model_path = None;
-        state_guard.loaded_gpu_device = None;
-        return Ok(true);
-    }
-    Ok(false)
+    let had_workers = state_guard.pool.worker_count() > 0;
+    state_guard.pool.reset();
+    Ok(had_workers)
 }

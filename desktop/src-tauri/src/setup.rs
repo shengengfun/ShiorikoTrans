@@ -3,22 +3,57 @@ use crate::{
     config::STORE_FILENAME,
     diagnostics::get_issue_url,
     error::LogError,
-    sona::SonaProcess,
+    sona::SonaPool,
 };
 use eyre::eyre;
 use once_cell::sync::Lazy;
 use std::fs;
-use tauri::{App, Manager};
+use std::sync::Arc;
+use tauri::{App, Listener, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
 
 pub static STATIC_APP: Lazy<std::sync::Mutex<Option<tauri::AppHandle>>> = Lazy::new(|| std::sync::Mutex::new(None));
 
+/// Cooperative abort signal shared by every in-flight transcription.
+///
+/// The pool can run several requests at once, so a single shared signal (set by
+/// one listener) replaces the per-request `abort_transcribe` listeners that used
+/// to race against each other.
+#[derive(Default)]
+pub struct AbortSignal {
+    raised: std::sync::atomic::AtomicBool,
+    notify: tokio::sync::Notify,
+}
+
+impl AbortSignal {
+    pub fn raise(&self) {
+        self.raised.store(true, std::sync::atomic::Ordering::SeqCst);
+        self.notify.notify_waiters();
+    }
+
+    pub fn reset(&self) {
+        self.raised.store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    pub fn is_raised(&self) -> bool {
+        self.raised.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// Wakes up when the user aborts, including requests that only start
+    /// waiting after the flag was raised.
+    pub async fn wait(&self) {
+        if self.is_raised() {
+            return;
+        }
+        self.notify.notified().await;
+    }
+}
+
 pub struct SonaState {
-    pub process: Option<SonaProcess>,
-    pub loaded_model_path: Option<String>,
-    pub loaded_gpu_device: Option<i32>,
+    pub pool: crate::sona::SonaPool,
+    pub abort: Arc<AbortSignal>,
     pub unload_timeout_minutes: u32,
 }
 
@@ -32,13 +67,34 @@ pub fn setup(app: &App) -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| panic!("cant create app config directory at {}", app_config_dir.display()));
 
     // Manage sona state
+    let abort = Arc::new(AbortSignal::default());
     app.manage(Mutex::new(SonaState {
-        process: None,
-        loaded_model_path: None,
-        loaded_gpu_device: None,
+        pool: SonaPool::new(),
+        abort: abort.clone(),
         unload_timeout_minutes: 5,
     }));
     app.manage(crate::dictation_indicator::DictationIndicatorRuntime::default());
+
+    // One listener for the whole app: it raises the shared abort flag and frees
+    // the inference processes, so every in-flight request (batch workers
+    // included) stops instead of racing to kill the same process.
+    {
+        let abort = abort.clone();
+        let listener_handle = app.handle().clone();
+        let spawned_handle = listener_handle.clone();
+        listener_handle.listen("abort_transcribe", move |_| {
+            abort.raise();
+            let handle = spawned_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                let state = handle.state::<Mutex<SonaState>>();
+                let mut state = state.lock().await;
+                if state.pool.worker_count() > 0 {
+                    tracing::debug!("killing sona workers due to abort_transcribe");
+                    state.pool.reset();
+                }
+            });
+        });
+    }
 
     let store = app.store(STORE_FILENAME)?;
 

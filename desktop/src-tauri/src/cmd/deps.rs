@@ -72,12 +72,10 @@ pub async fn install_ffmpeg(app_handle: tauri::AppHandle) -> Result<String> {
     {
         let state = app_handle.state::<tokio::sync::Mutex<crate::setup::SonaState>>();
         let mut guard = state.lock().await;
-        if let Some(mut process) = guard.process.take() {
+        if guard.pool.worker_count() > 0 {
             tracing::debug!("restarting sona so it picks up the new ffmpeg path");
-            process.kill();
+            guard.pool.reset();
         }
-        guard.loaded_model_path = None;
-        guard.loaded_gpu_device = None;
     }
 
     tracing::info!("ffmpeg installed at {}", target.display());

@@ -126,12 +126,19 @@ export default function ModelSettingsDialog({ open, setOpen, modelPath }: ModelS
 										<InfoTooltip text={m.infoThreads()} />
 										{m.threads()}
 									</Label>
-									<Input
-										type="number"
-										className={NUMBER_INPUT}
-										value={options.n_threads}
-										onChange={(event) => setOptions({ ...options, n_threads: parseIntOr(event.target.value, 1) })}
-									/>
+									<div className="flex items-center gap-2">
+										<Input
+											type="number"
+											className={NUMBER_INPUT}
+											disabled={preference.autoThreads}
+											value={options.n_threads}
+											onChange={(event) => setOptions({ ...options, n_threads: parseIntOr(event.target.value, 1) })}
+										/>
+										<label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+											<Switch checked={preference.autoThreads} onCheckedChange={preference.setAutoThreads} />
+											{m.auto()}
+										</label>
+									</div>
 								</div>
 								{!hasEngineOptions && (
 									<p className="text-xs text-muted-foreground">

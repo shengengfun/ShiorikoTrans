@@ -1,4 +1,5 @@
 mod devices;
+mod pool;
 mod process;
 #[cfg(test)]
 mod tests;
@@ -10,16 +11,42 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::process::Child;
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::AtomicU32;
 use tokio::io::AsyncRead;
 use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::io::{ReaderStream, StreamReader};
 
 pub use devices::list_gpu_devices;
+pub use pool::{AcquireStep, LoadedModel, SonaLease, SonaPool};
 
-/// Global storage for the sona process PID, used for synchronous cleanup on exit.
-/// This avoids the need for async mutex locks during application shutdown.
-pub static SONA_PID: AtomicU32 = AtomicU32::new(0);
+/// PIDs of every sona process the app started (one per worker).
+///
+/// Stored in a plain `std::sync::Mutex` so application shutdown can kill the
+/// whole tree synchronously, without touching the async runtime or any async
+/// lock that may still be held by an in-flight request.
+static SONA_PIDS: Mutex<Vec<u32>> = Mutex::new(Vec::new());
+
+fn register_process(pid: u32) {
+    let mut pids = SONA_PIDS.lock().unwrap_or_else(|error| error.into_inner());
+    if !pids.contains(&pid) {
+        pids.push(pid);
+    }
+}
+
+fn forget_process(pid: u32) {
+    let mut pids = SONA_PIDS.lock().unwrap_or_else(|error| error.into_inner());
+    pids.retain(|entry| *entry != pid);
+}
+
+/// Snapshot of every live sona PID, used by the exit handler.
+pub fn process_pids() -> Vec<u32> {
+    SONA_PIDS.lock().unwrap_or_else(|error| error.into_inner()).clone()
+}
+
+/// Forget the recorded PIDs (the exit handler just killed them).
+pub fn forget_all_processes() {
+    let mut pids = SONA_PIDS.lock().unwrap_or_else(|error| error.into_inner());
+    pids.clear();
+}
 
 const MAX_EVENT_LINE_LENGTH: usize = 64 * 1024 * 1024;
 
@@ -128,25 +155,53 @@ where
 
 fn skip_gguf_value(value_type: u32, buf: &[u8], mut offset: usize, buf_len: usize) -> Option<usize> {
     match value_type {
-        0 | 1 | 11 => { if offset + 1 > buf_len { return None; } offset += 1; } // UINT8, INT8, BOOL
-        2 | 3 => { if offset + 2 > buf_len { return None; } offset += 2; } // UINT16, INT16
-        5 | 6 => { if offset + 4 > buf_len { return None; } offset += 4; } // INT32, FLOAT32
-        7..=9 => { if offset + 8 > buf_len { return None; } offset += 8; } // UINT64, INT64, FLOAT64
-        4 => { // STRING
-            if offset + 8 > buf_len { return None; }
-            let len = u64::from_le_bytes(buf[offset..offset+8].try_into().unwrap()) as usize;
+        0 | 1 | 11 => {
+            if offset + 1 > buf_len {
+                return None;
+            }
+            offset += 1;
+        } // UINT8, INT8, BOOL
+        2 | 3 => {
+            if offset + 2 > buf_len {
+                return None;
+            }
+            offset += 2;
+        } // UINT16, INT16
+        5 | 6 => {
+            if offset + 4 > buf_len {
+                return None;
+            }
+            offset += 4;
+        } // INT32, FLOAT32
+        7..=9 => {
+            if offset + 8 > buf_len {
+                return None;
+            }
+            offset += 8;
+        } // UINT64, INT64, FLOAT64
+        4 => {
+            // STRING
+            if offset + 8 > buf_len {
+                return None;
+            }
+            let len = u64::from_le_bytes(buf[offset..offset + 8].try_into().unwrap()) as usize;
             offset += 8 + len;
         }
-        10 => { // ARRAY
-            if offset + 12 > buf_len { return None; }
-            let arr_type = u32::from_le_bytes(buf[offset..offset+4].try_into().unwrap());
-            let arr_len = u64::from_le_bytes(buf[offset+4..offset+12].try_into().unwrap()) as usize;
+        10 => {
+            // ARRAY
+            if offset + 12 > buf_len {
+                return None;
+            }
+            let arr_type = u32::from_le_bytes(buf[offset..offset + 4].try_into().unwrap());
+            let arr_len = u64::from_le_bytes(buf[offset + 4..offset + 12].try_into().unwrap()) as usize;
             offset += 12;
             for _ in 0..arr_len {
                 offset = skip_gguf_value(arr_type, buf, offset, buf_len)?;
             }
         }
-        _ => { return None; }
+        _ => {
+            return None;
+        }
     }
     Some(offset)
 }
@@ -163,34 +218,51 @@ fn read_gguf_architecture(path: &str) -> Option<String> {
     let metadata_kv_count: u64;
     let header_size: usize;
     if version == 1 {
-        if n < 16 { return None; }
+        if n < 16 {
+            return None;
+        }
         metadata_kv_count = u32::from_le_bytes([header[12], header[13], header[14], header[15]]) as u64;
         header_size = 16;
     } else {
-        if n < 24 { return None; }
+        if n < 24 {
+            return None;
+        }
         metadata_kv_count = u64::from_le_bytes(header[16..24].try_into().unwrap());
         header_size = 24;
     }
 
     let mut offset = header_size;
     for _ in 0..metadata_kv_count {
-        if offset + 8 > n { break; }
-        let key_len = u64::from_le_bytes(header[offset..offset+8].try_into().unwrap()) as usize;
+        if offset + 8 > n {
+            break;
+        }
+        let key_len = u64::from_le_bytes(header[offset..offset + 8].try_into().unwrap()) as usize;
         offset += 8;
-        if offset + key_len > n { break; }
-        let key = std::str::from_utf8(&header[offset..offset+key_len]).ok()?;
+        if offset + key_len > n {
+            break;
+        }
+        let key = std::str::from_utf8(&header[offset..offset + key_len]).ok()?;
         offset += key_len;
-        if offset + 4 > n { break; }
-        let value_type = u32::from_le_bytes(header[offset..offset+4].try_into().unwrap());
+        if offset + 4 > n {
+            break;
+        }
+        let value_type = u32::from_le_bytes(header[offset..offset + 4].try_into().unwrap());
         offset += 4;
 
         if key == "general.architecture" {
-            if value_type == 4 { // STRING
-                if offset + 8 > n { break; }
-                let str_len = u64::from_le_bytes(header[offset..offset+8].try_into().unwrap()) as usize;
+            if value_type == 4 {
+                // STRING
+                if offset + 8 > n {
+                    break;
+                }
+                let str_len = u64::from_le_bytes(header[offset..offset + 8].try_into().unwrap()) as usize;
                 offset += 8;
-                if offset + str_len > n { break; }
-                return std::str::from_utf8(&header[offset..offset+str_len]).ok().map(|s| s.to_string());
+                if offset + str_len > n {
+                    break;
+                }
+                return std::str::from_utf8(&header[offset..offset + str_len])
+                    .ok()
+                    .map(|s| s.to_string());
             }
             return None;
         }
@@ -214,7 +286,11 @@ impl SonaProcess {
             let body = response.text().await.unwrap_or_default();
             // B5: Fallback to manual GGUF architecture detection
             if let Some(arch) = read_gguf_architecture(path) {
-                bail!("sona model metadata failed: {} (detected GGUF architecture: {})", body.trim(), arch);
+                bail!(
+                    "sona model metadata failed: {} (detected GGUF architecture: {})",
+                    body.trim(),
+                    arch
+                );
             }
             bail!("sona model metadata failed: {}", body);
         }

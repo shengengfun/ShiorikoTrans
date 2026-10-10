@@ -25,7 +25,8 @@ export default function BatchPage() {
 
 							<div className="pt-2">
 								<BatchPanel
-									index={vm.currentIndex}
+									completed={vm.completedCount}
+									concurrency={vm.concurrency}
 									inProgress={vm.inProgress}
 									onCancel={vm.cancel}
 									isAborting={vm.isAborting}
@@ -51,7 +52,7 @@ export default function BatchPage() {
 								<span className="text-sm text-muted-foreground">{vm.files.length}</span>
 							</div>
 							{vm.files.length ? (
-								<BatchQueue files={vm.files} progress={vm.progress} activeIndex={vm.currentIndex} />
+								<BatchQueue files={vm.files} states={vm.fileStates} />
 							) : (
 								<div className="flex min-h-[240px] flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-background/50 p-6 text-center">
 									<p className="text-sm text-muted-foreground">{m.changeFiles()}</p>

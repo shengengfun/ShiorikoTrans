@@ -7,7 +7,9 @@ import { m } from '~/paraglide/messages.js'
 import { toast } from 'sonner'
 import successSound from '~/assets/success.mp3'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
-import { prepareTranscribeOptions } from '~/lib/transcribe-options'
+import { prepareTranscribeOptions, allowsChunking } from '~/lib/transcribe-options'
+import { getModelPipelineFromPath } from '~/lib/model-pipeline'
+import { planWorkers } from '~/lib/hardware'
 import { setActivity } from '~/lib/activity'
 import { ensureFfmpegInstalled } from '~/lib/ffmpeg'
 import { useModelDownload } from '~/lib/model-download'
@@ -98,10 +100,20 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 		try {
 			const current = preferenceRef.current
 			if (!current.modelPath) throw new Error('No model selected. Please download or select a model first.')
+			// Hardware-sized worker pool: a capable GPU may run several files at
+			// once, and a long file may be split across those workers.
+			const plan = await planWorkers({
+				modelPath: current.modelPath,
+				forceCpu: current.forceCpu,
+				highPerformance: current.highPerformanceMode,
+				overrideWorkers: current.parallelWorkers,
+			})
 			const loadResult = await invoke<string>('load_model', {
 				modelPath: current.modelPath,
 				gpuDevice: current.gpuDevice,
 				unloadTimeoutMinutes: current.unloadTimeoutMinutes,
+				maxWorkers: plan.workers,
+				highPerformance: current.highPerformanceMode,
 			})
 			if (loadResult === 'gpu_fallback') toast.warning(m.gpuFallbackToCpu(), { position: 'bottom-center', duration: 8000 })
 
@@ -116,6 +128,12 @@ export function useTranscription({ onResetSummary, onSummarize }: UseTranscripti
 				modelOptions: current.modelOptions,
 				diarizeEnabled: current.diarizeEnabled,
 				stableTimestampsEnabled: current.stableTimestampsEnabled,
+				maxWorkers: plan.workers,
+				allowChunking: allowsChunking(getModelPipelineFromPath(current.modelPath), {
+					enabled: current.highPerformanceMode && current.chunkLongFiles,
+					diarizeEnabled: current.diarizeEnabled,
+				}),
+				autoThreads: current.autoThreads,
 			})
 
 			// Engines without translation never receive a translate target, so this is

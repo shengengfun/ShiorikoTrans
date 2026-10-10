@@ -18,6 +18,7 @@ import { useToastProvider } from '~/providers/toast'
 import { Claude, Llm, Ollama, OpenAICompatible } from '~/lib/llm'
 import { ensureEngineRunning } from '~/lib/local-engine'
 import { UnlistenFn, listen } from '@tauri-apps/api/event'
+import { hardwareReport, invalidateHardwareReport, type HardwareReport } from '~/lib/hardware'
 import { useNavigate } from 'react-router-dom'
 import { load } from '@tauri-apps/plugin-store'
 import { useStoreValue } from '~/lib/use-store-value'
@@ -116,6 +117,8 @@ export function viewModel() {
 	const [isStartingApiServer, setIsStartingApiServer] = useState(false)
 	const [isStoppingApiServer, setIsStoppingApiServer] = useState(false)
 	const [gpuDevices, setGpuDevices] = useState<GpuDevice[]>([])
+	const [perfReport, setPerfReport] = useState<HardwareReport | null>(null)
+	const [loadingHardware, setLoadingHardware] = useState(false)
 	const isMacOS = platform() === 'macos'
 	const navigate = useNavigate()
 	const progressToast = useToastProvider()
@@ -374,6 +377,30 @@ export function viewModel() {
 		}
 	}
 
+	/**
+	 * Detected hardware plus the runtime profile the app would apply. Re-runs
+	 * whenever the model or the performance settings change, since the worker
+	 * count depends on the model size and the selected device.
+	 */
+	async function loadHardwareReport() {
+		setLoadingHardware(true)
+		try {
+			invalidateHardwareReport()
+			const report = await hardwareReport({
+				modelPath: preference.modelPath,
+				forceCpu: preference.forceCpu,
+				highPerformance: preference.highPerformanceMode,
+				overrideWorkers: preference.parallelWorkers,
+			})
+			setPerfReport(report)
+		} catch (error) {
+			console.error('hardware detection failed:', error)
+			setPerfReport(null)
+		} finally {
+			setLoadingHardware(false)
+		}
+	}
+
 	async function refreshApiServerStatus() {
 		try {
 			const baseUrl = await invoke<string | null>('get_api_base_url')
@@ -442,6 +469,12 @@ export function viewModel() {
 		}
 	}, [])
 
+	// The worker count depends on the model size and the performance settings, so
+	// the profile is re-detected when any of them changes.
+	useEffect(() => {
+		loadHardwareReport()
+	}, [preference.modelPath, preference.forceCpu, preference.highPerformanceMode, preference.parallelWorkers])
+
 	useEffect(() => {
 		const platform = preference.llmConfig?.platform
 		const llmInstance =
@@ -504,6 +537,9 @@ export function viewModel() {
 		gpuDevices,
 		setGpuDevices,
 		loadGpuDevices,
+		perfReport,
+		loadingHardware,
+		loadHardwareReport,
 		isMacOS,
 		llm,
 		llmError,

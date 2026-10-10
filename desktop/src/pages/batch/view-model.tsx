@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { m } from '~/paraglide/messages.js'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { TextFormat, formatExtensions } from '~/components/format-select'
@@ -11,7 +11,9 @@ import { validPath } from '~/lib/media'
 import { startKeepAwake, stopKeepAwake } from '~/lib/keep-awake'
 import * as webview from '@tauri-apps/api/webviewWindow'
 import * as dialog from '@tauri-apps/plugin-dialog'
-import { prepareTranscribeOptions } from '~/lib/transcribe-options'
+import { prepareTranscribeOptions, allowsChunking } from '~/lib/transcribe-options'
+import { getModelPipelineFromPath } from '~/lib/model-pipeline'
+import { planWorkers, type WorkerPlan } from '~/lib/hardware'
 import * as config from '~/lib/config'
 import { setActivity } from '~/lib/activity'
 import { analyticsEvents, trackAnalyticsEvent } from '~/lib/analytics'
@@ -20,18 +22,30 @@ import * as fs from '@tauri-apps/plugin-fs'
 import { emit, listen } from '@tauri-apps/api/event'
 import { usePreferenceProvider } from '~/providers/preference'
 import { useFilesContext } from '~/providers/files-provider'
+import type { ProgressEvent } from '~/providers/transcription'
 import { basename } from '@tauri-apps/api/path'
 import { Claude, Ollama, Llm, OpenAICompatible } from '~/lib/llm'
 import * as transcript from '~/lib/transcript'
 import { path } from '@tauri-apps/api'
 import { toast } from 'sonner'
 
+const BATCH_JOB_PREFIX = 'batch-'
+
+/** Per-file state shown in the queue while a batch runs. */
+export interface BatchFileState {
+	status: 'pending' | 'running' | 'done' | 'skipped' | 'failed'
+	progress: number
+}
+
+type FileOutcome = 'done' | 'failed' | 'stop'
+
 export function viewModel() {
 	const { files, setFiles } = useFilesContext()
 
 	const [formats, setFormats] = useState<TextFormat[]>(['normal'])
-	const [currentIndex, setCurrentIndex] = useState(0)
-	const [progress, setProgress] = useState<number | null>(null)
+	const [completedCount, setCompletedCount] = useState(0)
+	const [fileStates, setFileStates] = useState<Record<number, BatchFileState>>({})
+	const [concurrency, setConcurrency] = useState(1)
 	const [inProgress, setInProgress] = useState(false)
 	const [isAborting, setIsAborting] = useState(false)
 	const isAbortingRef = useRef<boolean>(false)
@@ -40,6 +54,13 @@ export function viewModel() {
 	const [llm, setLlm] = useState<Llm | null>(null)
 	const location = useLocation()
 	const [outputFolder, setOutputFolder] = useState('')
+
+	/** Mean progress of the files running right now, for the status bar. */
+	const progress = useMemo(() => {
+		const running = Object.values(fileStates).filter((state) => state.status === 'running')
+		if (!running.length) return 0
+		return Math.round(running.reduce((sum, state) => sum + state.progress, 0) / running.length)
+	}, [fileStates])
 
 	useEffect(() => {
 		if (preference.llmConfig?.platform === 'ollama') {
@@ -161,30 +182,64 @@ export function viewModel() {
 		}
 
 		setInProgress(true)
+		setIsAborting(false)
 
 		startKeepAwake()
 
-		let localIndex = 0
 		if (!preference.modelPath) {
+			setInProgress(false)
+			stopKeepAwake()
 			throw new Error('No model selected. Please download or select a model first.')
 		}
 		const modelPath = preference.modelPath
+		const pipeline = getModelPipelineFromPath(modelPath)
+		const allowChunking = allowsChunking(pipeline, {
+			enabled: preference.highPerformanceMode && preference.chunkLongFiles,
+			diarizeEnabled: preference.diarizeEnabled,
+		})
+
+		// How many files may run at once. The hardware decides unless the user
+		// picked a fixed worker count.
+		let plan: WorkerPlan
+		try {
+			plan = await planWorkers({
+				modelPath,
+				forceCpu: preference.forceCpu,
+				highPerformance: preference.highPerformanceMode,
+				overrideWorkers: preference.parallelWorkers,
+			})
+		} catch (error) {
+			console.error('failed to size the worker pool:', error)
+			plan = { workers: 1, profile: null as never, hardware: null as never }
+		}
+		const parallel = Math.max(1, Math.min(plan.workers, files.length))
+		setConcurrency(parallel)
+
 		const loadResult = await invoke<string>('load_model', {
 			modelPath,
 			gpuDevice: preference.gpuDevice,
 			unloadTimeoutMinutes: preference.unloadTimeoutMinutes,
+			maxWorkers: plan.workers,
+			highPerformance: preference.highPerformanceMode,
 		})
 		if (loadResult === 'gpu_fallback') {
 			toast.warning(m.gpuFallbackToCpu(), { position: 'bottom-center', duration: 8000 })
 		}
-		setCurrentIndex(localIndex)
-		const loopStartTime = performance.now()
-		for (const file of files) {
+
+		setFileStates(Object.fromEntries(files.map((_, index) => [index, { status: 'pending' as const, progress: 0 }])))
+		setCompletedCount(0)
+
+		let nextIndex = 0
+		let stopRequested = false
+
+		/**
+		 * Runs one file to completion. Several of these run at once, each on its
+		 * own inference worker, so the shared state is updated by index.
+		 */
+		async function processFile(index: number): Promise<FileOutcome> {
+			const file = files[index]
+			const jobId = `${BATCH_JOB_PREFIX}${index}`
 			try {
-				if (isAbortingRef.current) {
-					break
-				}
-				setProgress(null)
 				// Engine-aware options: only pass what the selected model supports and
 				// attach the helper models it needs (VAD is downloaded on demand).
 				const { options } = await prepareTranscribeOptions({
@@ -194,8 +249,13 @@ export function viewModel() {
 					modelOptions: preference.modelOptions,
 					diarizeEnabled: preference.diarizeEnabled,
 					stableTimestampsEnabled: preference.stableTimestampsEnabled,
+					jobId,
+					maxWorkers: parallel,
+					allowChunking,
+					autoThreads: preference.autoThreads,
 				})
 				const startTime = performance.now()
+				setFileStates((prev) => ({ ...prev, [index]: { status: 'running', progress: 0 } }))
 
 				// Check if exists
 				const someFormat = formatExtensions[formats[0]]
@@ -209,9 +269,9 @@ export function viewModel() {
 
 				if (preference.advancedTranscribeOptions.skipIfExists && !outputFolder && (await fs.exists(dst))) {
 					// ^ We can't know if it's not next to the audio file, multiple files can have the same names
-					localIndex += 1
-					setCurrentIndex(localIndex)
-					continue
+					setFileStates((prev) => ({ ...prev, [index]: { status: 'skipped', progress: 100 } }))
+					setCompletedCount((count) => count + 1)
+					return 'done'
 				}
 
 				trackAnalyticsEvent(analyticsEvents.TRANSCRIBE_STARTED, {
@@ -222,7 +282,7 @@ export function viewModel() {
 				})
 
 				if (isAbortingRef.current) {
-					break
+					return 'done'
 				}
 
 				// Calculate time
@@ -266,11 +326,10 @@ export function viewModel() {
 					const summaryPath = await invoke<string>('get_path_dst', { src: file.path, suffix: '.summary.txt' })
 					await fs.writeTextFile(summaryPath, getText(llmSegments, 'srt'))
 				}
-				localIndex += 1
-				await new Promise((resolve) => setTimeout(resolve, 100))
-				setCurrentIndex(localIndex)
+				setFileStates((prev) => ({ ...prev, [index]: { status: 'done', progress: 100 } }))
+				setCompletedCount((count) => count + 1)
+				return 'done'
 			} catch (error) {
-				stopKeepAwake()
 				const errorObj = typeof error === 'object' && error !== null ? (error as any) : null
 				const errorCode = errorObj?.code
 				const errorMessage = errorObj?.message || String(error)
@@ -288,28 +347,44 @@ export function viewModel() {
 						file_ext: file.name.split('.').pop() ?? 'unknown',
 					})
 					if (isAbortingRef.current) {
-						navigate('/')
-						break
-					} else {
-						console.error(`error while transcribe ${file.name}: `, error)
+						return 'done'
 					}
+					console.error(`error while transcribe ${file.name}: `, error)
 
 					// Stop batch if model is not loaded — all subsequent files will fail too
 					if (String(error).includes('no model loaded')) {
 						toast.error(m.noModelLoadedBatchStopped())
-						break
+						setFileStates((prev) => ({ ...prev, [index]: { status: 'failed', progress: 0 } }))
+						setCompletedCount((count) => count + 1)
+						return 'stop'
 					}
 				}
 
-				localIndex += 1
-				setCurrentIndex(localIndex)
+				setFileStates((prev) => ({ ...prev, [index]: { status: 'failed', progress: 0 } }))
+				setCompletedCount((count) => count + 1)
+				return 'failed'
 			}
 		}
+
+		// Simple worker pool: every runner pulls the next file until the queue is
+		// empty, so one slow file never blocks the others.
+		const runners = Array.from({ length: parallel }, async () => {
+			while (!isAbortingRef.current && !stopRequested) {
+				const index = nextIndex
+				nextIndex += 1
+				if (index >= files.length) return
+				const outcome = await processFile(index)
+				if (outcome === 'stop') {
+					stopRequested = true
+					return
+				}
+			}
+		})
+		await Promise.all(runners)
+
 		stopKeepAwake()
-		setCurrentIndex(files.length + 1)
 		setInProgress(false)
 		setIsAborting(false)
-		setProgress(null)
 		// Focus back the window and play sound
 		if (preference!.soundOnFinish) {
 			new Audio(successSound).play()
@@ -318,16 +393,22 @@ export function viewModel() {
 			webview.getCurrentWebviewWindow().unminimize()
 			webview.getCurrentWebviewWindow().setFocus()
 		}
-		let total = Math.round((performance.now() - loopStartTime) / 1000)
-		console.info(`Transcribed ${files.length} files in ${total}`)
+		console.info(`Batch finished: ${completedCount} of ${files.length} files processed`)
 	}
 
 	async function ListenForProgress() {
-		await listen<number>('transcribe_progress', (event) => {
-			const value = event.payload
-			if (value >= 0 && value <= 100) {
-				setProgress(value)
-			}
+		await listen<ProgressEvent>('transcribe_progress', (event) => {
+			const jobId = event.payload?.jobId
+			if (!jobId || !jobId.startsWith(BATCH_JOB_PREFIX)) return
+			const index = Number(jobId.slice(BATCH_JOB_PREFIX.length))
+			if (!Number.isInteger(index)) return
+			const value = Math.round(event.payload.progress)
+			if (value < 0 || value > 100) return
+			setFileStates((prev) => {
+				const current = prev[index]
+				if (!current || current.progress === value) return prev
+				return { ...prev, [index]: { ...current, progress: value } }
+			})
 		})
 	}
 
@@ -338,7 +419,7 @@ export function viewModel() {
 
 	// Publish global activity for the bottom status bar
 	useEffect(() => {
-		setActivity(inProgress ? { phase: 'transcribing', progress: progress ?? 0 } : { phase: 'idle' })
+		setActivity(inProgress ? { phase: 'transcribing', progress } : { phase: 'idle' })
 	}, [inProgress, progress])
 
 	async function cancel() {
@@ -358,8 +439,9 @@ export function viewModel() {
 		inProgress,
 		setInProgress,
 		progress,
-		setProgress,
-		currentIndex,
+		fileStates,
+		completedCount,
+		concurrency,
 		cancel,
 		start,
 		files,

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod analytics;
+mod chunked;
 mod cleaner;
 mod cli;
 mod cmd;
@@ -10,6 +11,7 @@ mod diagnostics;
 mod dictation_indicator;
 mod error;
 mod ffmpeg;
+mod hardware;
 mod llama;
 mod logging;
 mod nmt;
@@ -94,6 +96,7 @@ async fn main() -> Result<()> {
             cmd::download::download_model,
             cmd::sona_cmd::load_model,
             cmd::sona_cmd::get_gpu_devices,
+            cmd::sona_cmd::get_hardware_info,
             cmd::sona_cmd::get_model_metadata,
             cmd::sona_cmd::get_api_base_url,
             cmd::sona_cmd::start_api_server,
@@ -188,29 +191,31 @@ fn kill_sidecar_processes(app: &tauri::AppHandle) {
     kill_sona_process_tree();
 }
 
-/// Kills the sona process tree synchronously using the globally stored PID.
+/// Kills every sona process the app started, using the globally recorded PIDs.
 /// This function does NOT use any async operations or locks, making it safe
 /// to call during application shutdown when the async runtime may be unavailable.
 fn kill_sona_process_tree() {
-    let pid = sona::SONA_PID.load(std::sync::atomic::Ordering::SeqCst);
-    if pid == 0 {
+    let pids = sona::process_pids();
+    if pids.is_empty() {
         return;
     }
-    tracing::info!("killing sona process tree (PID {}) on exit", pid);
+    tracing::info!("killing {} sona process tree(s) on exit", pids.len());
 
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        let _ = std::process::Command::new("taskkill")
-            .args(["/F", "/T", "/PID", &pid.to_string()])
-            .creation_flags(0x08000000) // CREATE_NO_WINDOW
-            .output();
+    for pid in &pids {
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            let _ = std::process::Command::new("taskkill")
+                .args(["/F", "/T", "/PID", &pid.to_string()])
+                .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                .output();
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = std::process::Command::new("kill").args(["-9", &pid.to_string()]).output();
+        }
     }
 
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = std::process::Command::new("kill").args(["-9", &pid.to_string()]).output();
-    }
-
-    sona::SONA_PID.store(0, std::sync::atomic::Ordering::SeqCst);
+    sona::forget_all_processes();
 }

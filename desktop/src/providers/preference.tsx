@@ -117,6 +117,24 @@ export interface Preference {
 	gpuDevice: number | null
 	setGpuDevice: ModifyState<number | null>
 
+	/**
+	 * High-performance mode: transcribe several files (and, for long files,
+	 * several chunks of one file) at once across a pool of inference processes.
+	 * The worker count is derived from the detected GPU memory unless
+	 * `parallelWorkers` overrides it.
+	 */
+	highPerformanceMode: boolean
+	setHighPerformanceMode: ModifyState<boolean>
+	/** Manual worker count; `null` lets the hardware detection decide. */
+	parallelWorkers: number | null
+	setParallelWorkers: ModifyState<number | null>
+	/** Split long files into silence-aligned chunks when running in parallel. */
+	chunkLongFiles: boolean
+	setChunkLongFiles: ModifyState<boolean>
+	/** Derive the decoding thread count from the CPU instead of a fixed value. */
+	autoThreads: boolean
+	setAutoThreads: ModifyState<boolean>
+
 	forceCpu: boolean
 	setForceCpu: ModifyState<boolean>
 	/** Rewrite HuggingFace download URLs to hf-mirror.com (slow/unreachable HF). */
@@ -315,6 +333,16 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	const [stableTimestampsEnabled, setStableTimestampsEnabled] = useLocalStorage<boolean>('prefs_stable_timestamps_enabled', false)
 	const [gpuDevice, setGpuDevice] = useLocalStorage<number | null>('prefs_gpu_device', null)
 	const [forceCpu, setForceCpu] = useLocalStorage<boolean>('prefs_force_cpu', false)
+	// Default on: the hardware detection decides how much parallelism the machine
+	// can take, and unsupported devices fall back to a single process.
+	const [highPerformanceMode, setHighPerformanceMode] = useLocalStorage<boolean>('prefs_high_performance_mode', true)
+	const [parallelWorkers, setParallelWorkers] = useLocalStorage<number | null>('prefs_parallel_workers', null)
+	// Off by default: measured on a shared-memory GPU, splitting one file is
+	// slower than transcribing it in a single pass, and cuts land in the middle
+	// of the audio. Enabling it is a deliberate trade of wording at the cut
+	// points for wall-clock time on a fast discrete GPU.
+	const [chunkLongFiles, setChunkLongFiles] = useLocalStorage<boolean>('prefs_chunk_long_files', false)
+	const [autoThreads, setAutoThreads] = useLocalStorage<boolean>('prefs_auto_threads', true)
 	const [hfMirrorEnabled, setHfMirrorEnabled] = useLocalStorage<boolean>('prefs_hf_mirror', false)
 	const [vulkanDevice, setVulkanDevice] = useLocalStorage<number | null>('prefs_vulkan_device', null)
 	const [enableDiagnostics, setEnableDiagnostics] = useLocalStorage<boolean>('prefs_enable_diagnostics', false)
@@ -538,6 +566,14 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 		setStableTimestampsEnabled,
 		gpuDevice,
 		setGpuDevice,
+		highPerformanceMode,
+		setHighPerformanceMode,
+		parallelWorkers,
+		setParallelWorkers,
+		chunkLongFiles,
+		setChunkLongFiles,
+		autoThreads,
+		setAutoThreads,
 		forceCpu,
 		setForceCpu,
 		hfMirrorEnabled,

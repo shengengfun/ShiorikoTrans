@@ -1,6 +1,6 @@
 [package]
 name = "shiorikotrans"
-version = "1.0.12"
+version = "1.0.13"
 description = "ShiorikoTrans - Transcribe audio and video on your device"
 authors = ["ShiorikoTrans Team"]
 license = "MIT"
@@ -104,6 +104,9 @@ windows = { version = "0.62.2", features = [
 	"Win32_System_Console",
 	"Win32_Foundation",
 	"Win32_System_Threading",
+	# GPU memory detection for the automatic concurrency sizing
+	"Win32_Graphics_Dxgi",
+	"Win32_Graphics_Dxgi_Common",
 ] }
 # Used to redirect stdout/stderr from c++ to the attached console
 libc = "0.2.180"

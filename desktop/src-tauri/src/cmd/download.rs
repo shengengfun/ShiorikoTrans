@@ -11,6 +11,10 @@ use tauri::{Emitter, Listener, Manager};
 
 use super::ui::set_progress_bar;
 
+/// Progress key for downloads in the shared progress registry (kept apart from
+/// transcription jobs, which drive their own UI rows).
+const DOWNLOAD_JOB_ID: &str = "download";
+
 #[derive(Debug, Serialize)]
 #[serde(tag = "status", rename_all = "snake_case")]
 pub enum DownloadModelResult {
@@ -93,7 +97,7 @@ async fn download_to_partial(
     let app_handle_listener = app_handle.clone();
     let listener_id = app_handle.listen("abort_download", move |_| {
         if show_system_progress {
-            set_progress_bar(&app_handle_listener, None).log_error();
+            set_progress_bar(&app_handle_listener, Some(DOWNLOAD_JOB_ID), None).log_error();
         }
         abort_handle.abort();
     });
@@ -118,7 +122,7 @@ async fn download_to_partial(
                 let percentage = (downloaded as f64 / total_size as f64) * 100.0;
                 tracing::trace!("percentage: {}", percentage);
                 if show_system_progress {
-                    set_progress_bar(app_handle, Some(percentage)).log_error();
+                    set_progress_bar(app_handle, Some(DOWNLOAD_JOB_ID), Some(percentage)).log_error();
                 }
                 if let Some(window) = app_handle.get_webview_window("main") {
                     window.emit("download_progress", (downloaded, total_size)).log_error();
@@ -144,7 +148,7 @@ async fn download_to_partial(
 
     app_handle.unlisten(listener_id);
     if show_system_progress {
-        set_progress_bar(app_handle, None).log_error();
+        set_progress_bar(app_handle, Some(DOWNLOAD_JOB_ID), None).log_error();
     }
 
     if !matches!(&result, Ok(DownloadOutcome::Completed)) {

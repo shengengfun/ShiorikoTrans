@@ -8,27 +8,29 @@ interface BatchPanelProps {
 	files: NamedPath[]
 	onStart: () => void
 	onCancel: () => void
-	index: number
+	completed: number
+	concurrency: number
 	inProgress: boolean
 	isAborting: boolean
 	modelPath: string | null
 }
 
-export default function BatchPanel({ files, onStart, onCancel, index, inProgress, isAborting, modelPath }: BatchPanelProps) {
+export default function BatchPanel({ files, onStart, onCancel, completed, concurrency, inProgress, isAborting, modelPath }: BatchPanelProps) {
 	return (
 		<div className="flex items-center gap-4 rounded-2xl border border-border/70 bg-muted/55 p-3 md:p-4">
 			<div className="flex flex-col">
 				{inProgress && (
 					<span className="text-sm font-medium tracking-wide">
-						{m.transcribing()} ({index + 1}/{files.length})
+						{m.transcribing()} ({completed}/{files.length})
+						{concurrency > 1 ? ` · ${m.parallelFiles({ count: String(concurrency) })}` : ''}
 					</span>
 				)}
-				{!isAborting && !inProgress && index < files.length && (
+				{!isAborting && !inProgress && completed < files.length && (
 					<span className="text-sm font-medium tracking-wide">
 						{m.transcribe()} {files.length} {m.files()}
 					</span>
 				)}
-				{!isAborting && !inProgress && index > files.length && (
+				{!isAborting && !inProgress && completed >= files.length && files.length > 0 && (
 					<span className="text-sm font-medium tracking-wide">
 						{m.transcribed()} {files.length} {m.files()}
 					</span>

@@ -8,6 +8,7 @@ import { Input } from '~/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Switch } from '~/components/ui/switch'
 import { AdaptiveSections, EmptyHint, SettingPanel, SettingRow, SettingsGroup, StateBadge } from '../components/kit'
+import { formatBytes } from '~/lib/hardware'
 import type { SettingsViewModel } from './shared'
 
 interface GpuDeviceInfo {
@@ -19,7 +20,132 @@ interface GpuDeviceInfo {
 
 export function GpuSection({ vm, tab }: { vm: SettingsViewModel; tab: string }) {
 	if (tab === 'diagnostics') return <DiagnosticsTab vm={vm} />
+	if (tab === 'performance') return <PerformanceTab vm={vm} />
 	return <AccelerationTab vm={vm} />
+}
+
+function PerformanceTab({ vm }: { vm: SettingsViewModel }) {
+	const preference = vm.preference
+	const report = vm.perfReport
+	const hardware = report?.hardware
+	const profile = report?.profile
+
+	/** Localised explanation of why the pool came out the way it did. */
+	function reasonText(): string {
+		if (!profile) return vm.loadingHardware ? m.detectingHardware() : m.hardwareUnavailable()
+		const reason = profile.reason
+		switch (reason.code) {
+			case 'disabled':
+				return m.perfReasonDisabled()
+			case 'cpuOnly':
+				return m.perfReasonCpuOnly({ threads: String(reason.physicalCores ?? profile.threads) })
+			case 'parallel':
+				return m.perfReasonParallel({
+					vram: (reason.vramGb ?? 0).toFixed(0),
+					model: (reason.modelGb ?? 0).toFixed(1),
+					perWorker: (reason.perWorkerGb ?? 0).toFixed(1),
+					workers: String(profile.workers),
+				})
+			case 'singleWorkerLowVram':
+				return m.perfReasonLowVram({ vram: (reason.vramGb ?? 0).toFixed(0), model: (reason.modelGb ?? 0).toFixed(1) })
+			case 'integratedGpu':
+				return m.perfReasonIntegratedGpu()
+			case 'unknownVram':
+				return m.perfReasonUnknownVram({ workers: String(reason.workers ?? profile.workers) })
+			case 'memoryLimited':
+				return m.perfReasonMemoryLimited({ ram: (reason.ramGb ?? 0).toFixed(0) })
+			case 'gpuFallback':
+				return m.perfReasonGpuFallback()
+			case 'overridden':
+				return m.perfReasonOverridden({ workers: String(reason.workers ?? profile.workers) })
+			default:
+				return m.hardwareUnavailable()
+		}
+	}
+
+	return (
+		<AdaptiveSections>
+			<SettingsGroup title={m.performanceMode()} description={m.performanceModeInfo()}>
+				<SettingRow id="highPerformanceMode" control={<Switch checked={preference.highPerformanceMode} onCheckedChange={preference.setHighPerformanceMode} />} />
+				<SettingRow id="autoThreads" control={<Switch checked={preference.autoThreads} onCheckedChange={preference.setAutoThreads} />} />
+				<SettingRow
+					id="chunkLongFiles"
+					control={<Switch checked={preference.chunkLongFiles} onCheckedChange={preference.setChunkLongFiles} />}
+				/>
+				<SettingRow
+					id="parallelWorkers"
+					control={
+						<Select
+							value={preference.parallelWorkers != null ? String(preference.parallelWorkers) : 'auto'}
+							onValueChange={(value) => preference.setParallelWorkers(value === 'auto' ? null : parseInt(value, 10))}>
+							<SelectTrigger className="h-9 w-64">
+								<SelectValue placeholder={m.auto()} />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="auto">{m.auto()}</SelectItem>
+								{[1, 2, 3, 4].map((workers) => (
+									<SelectItem key={workers} value={String(workers)}>
+										{m.parallelWorkersCount({ count: String(workers) })}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					}
+				/>
+			</SettingsGroup>
+
+			<SettingsGroup title={m.detectedHardware()}>
+				<SettingPanel id="detectedHardware" className="space-y-3">
+					<div className="flex flex-wrap items-center gap-2">
+						<Cpu className="h-4 w-4 shrink-0 text-muted-foreground" />
+						<span className="text-sm font-medium">{m.detectedHardware()}</span>
+						<Button variant="outline" size="sm" className="ms-auto h-8 gap-1.5" onClick={vm.loadHardwareReport} disabled={vm.loadingHardware}>
+							<RefreshCw className={vm.loadingHardware ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} />
+							{vm.loadingHardware ? m.detectingHardware() : m.redetectHardware()}
+						</Button>
+					</div>
+					{hardware ? (
+						<ul className="space-y-1 text-sm">
+							<li className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-2.5 py-1.5">
+								<span className="min-w-0 flex-1 truncate" title={hardware.cpuBrand}>
+									{hardware.cpuBrand || m.cpu()}
+								</span>
+								<span className="text-muted-foreground">{m.cpuCores({ physical: String(hardware.cpuPhysicalCores), logical: String(hardware.cpuLogicalCores) })}</span>
+							</li>
+							<li className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-2.5 py-1.5">
+								<span className="min-w-0 flex-1">{m.memory()}</span>
+								<span className="text-muted-foreground">{formatBytes(hardware.totalRamBytes)}</span>
+							</li>
+							{hardware.gpus.map((gpu) => (
+								<li key={gpu.index} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-2.5 py-1.5">
+									<span className="font-mono text-[11px] text-muted-foreground">#{gpu.index}</span>
+									<span className="min-w-0 flex-1 truncate" title={gpu.description}>
+										{gpu.description}
+									</span>
+									<span className="text-muted-foreground">{formatBytes(gpu.vramBytes)}</span>
+									<StateBadge>{gpu.deviceType}</StateBadge>
+								</li>
+							))}
+						</ul>
+					) : (
+						<EmptyHint>{vm.loadingHardware ? m.detectingHardware() : m.hardwareUnavailable()}</EmptyHint>
+					)}
+				</SettingPanel>
+			</SettingsGroup>
+
+			<SettingsGroup title={m.activeProfile()}>
+				<SettingPanel id="activeProfile" className="space-y-2">
+					<div className="flex flex-wrap items-center gap-2">
+						<StateBadge tone={profile?.parallel ? 'primary' : 'muted'}>
+							{profile ? m.parallelWorkersCount({ count: String(profile.workers) }) : m.auto()}
+						</StateBadge>
+						{profile && <span className="text-sm text-muted-foreground">{m.decodingThreads({ count: String(profile.threads) })}</span>}
+					</div>
+					<p className="text-sm text-muted-foreground">{reasonText()}</p>
+				</SettingPanel>
+			</SettingsGroup>
+		</AdaptiveSections>
+	)
 }
 
 function AccelerationTab({ vm }: { vm: SettingsViewModel }) {

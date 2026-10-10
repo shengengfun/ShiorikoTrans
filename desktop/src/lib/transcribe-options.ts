@@ -17,6 +17,14 @@ export interface PrepareTranscribeInput {
 	modelOptions: ModelOptions
 	diarizeEnabled: boolean
 	stableTimestampsEnabled: boolean
+	/** Groups this request's progress/segments when several run at once. */
+	jobId?: string | null
+	/** How many inference workers this request may use (`1` = run alone). */
+	maxWorkers?: number | null
+	/** Whether a long file may be split into parallel chunks. */
+	allowChunking?: boolean
+	/** Derive the decoding threads from the CPU instead of a fixed value. */
+	autoThreads?: boolean
 }
 
 /**
@@ -34,11 +42,13 @@ export interface TranscribeRequestOptions extends Record<string, unknown> {
  * "does not support text prompts" as soon as a Whisper-era prompt is still
  * configured), so the shared model options must be filtered per engine.
  */
-export function filterModelOptions(pipeline: ModelPipeline, options: ModelOptions) {
+export function filterModelOptions(pipeline: ModelPipeline, options: ModelOptions, autoThreads = false) {
 	const filtered: Record<string, unknown> = {
 		lang: options.lang,
 		verbose: options.verbose,
-		n_threads: options.n_threads,
+		// Leaving the thread count out lets the backend use one thread per
+		// physical core, which is what whisper.cpp is tuned for.
+		...(autoThreads ? {} : { n_threads: options.n_threads }),
 		// Engines without translation must receive 'none' instead of a stale target.
 		translate: pipeline.supportsTranslation ? options.translate : 'none',
 	}
@@ -105,10 +115,26 @@ export async function prepareTranscribeOptions(input: PrepareTranscribeInput): P
 
 	const options: TranscribeRequestOptions = {
 		path: input.path,
-		...filterModelOptions(pipeline, input.modelOptions),
+		...filterModelOptions(pipeline, input.modelOptions, input.autoThreads ?? false),
 		...(diarizeModel ? { diarize_model: diarizeModel } : {}),
 		...(vadModel ? { vad_model: vadModel } : {}),
 		...(stableTimestamps ? { stable_timestamps: true } : {}),
+		...(input.jobId ? { job_id: input.jobId } : {}),
+		...(input.maxWorkers && input.maxWorkers > 1 ? { max_workers: input.maxWorkers } : {}),
+		...(input.allowChunking ? { allow_chunking: true } : {}),
 	}
 	return { options, metadata }
+}
+
+/**
+ * Whether this file may be split into parallel chunks.
+ *
+ * Only the Whisper family is split: its decoders take an independent 30s window
+ * and so produce absolute timestamps per chunk, whereas the other engines either
+ * do their own segmentation or report no timings at all. Diarization is excluded
+ * because speaker numbering is only consistent within a single run.
+ */
+export function allowsChunking(pipeline: ModelPipeline, options: { enabled: boolean; diarizeEnabled: boolean }): boolean {
+	if (!options.enabled || options.diarizeEnabled) return false
+	return pipeline.type === 'whisper' || pipeline.type === 'custom'
 }
